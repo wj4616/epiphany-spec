@@ -247,8 +247,10 @@ The orchestrator picks ready nodes in graph-declared order:
 
 1. Resolve next ready node `N`.
 2. Look up tier via `hats.json[N.hat]`.
-3. Compose `{{ledger_at_dispatch}}` = digest of `grs-ledger.md` (last 8 entries
-   or full content if shorter).
+3. Compose `{{ledger_at_dispatch}}` by invoking
+   `bash scripts/ledger-digest.sh --session-dir <SD> --max-entries 8 --max-bytes 8192`
+   and substituting its stdout into the prompt template (F106 — deterministic;
+   no orchestrator-side summarization).
 4. Dispatch:
    - **inline (LLM)**: read `modules/<N>.md`, role-switch to that module's
      prompt template (substitute `{{ledger_at_dispatch}}`), produce output
