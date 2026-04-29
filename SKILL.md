@@ -257,8 +257,12 @@ The orchestrator picks ready nodes in graph-declared order:
      conforming to `required_output_sections`.
    - **inline (no-llm)**: execute the module's "Algorithm" section as pure
      orchestrator logic. NO LLM call.
-   - **spawn**: call `Agent(subagent_type=general-purpose, ...)` with the
-     module's prompt template + ledger digest as the prompt body. Required
+   - **spawn**: invoke `bash scripts/build-prompt.sh --module modules/<X>.md
+     --session-dir <SD>` to produce a fully-substituted prompt body
+     (F111 -- substitution is script-side; an orchestrator that omits this
+     step gets a `[DISPATCH-PLACEHOLDER-LEAK]` halt rather than a silent
+     placeholder reaching the subagent). Pass the script's stdout as the
+     prompt body to `Agent(subagent_type=general-purpose, ...)`. Required
      output sections must be returned as a YAML block.
 5. Write fragment to `stages/N<P>-<NodeName>[-<seq>].md` per S3 fragment naming.
 6. Run **N-SCORE** (mixed tier -- see modules/N-SCORE.md): LLM-judged for
