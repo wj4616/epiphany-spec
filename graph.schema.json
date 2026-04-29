@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "epiphany-spec graph topology",
+  "type": "object",
+  "required": ["version", "nodes", "edges", "dynamic_templates", "branch_labels"],
+  "properties": {
+    "version": {"type": "string"},
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "module_file", "phase", "exec_type", "tier", "required_output_sections"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Z][A-Z0-9-]+$"},
+          "module_file": {"type": "string"},
+          "phase": {"type": ["number", "string"]},
+          "exec_type": {"type": "string", "enum": ["inline", "spawn"]},
+          "exec_type_alternatives": {"type": "array", "items": {"type": "string", "enum": ["inline", "spawn"]}},
+          "exec_decision": {"type": "string"},
+          "tier": {"type": "string", "enum": ["large", "medium", "small", "no-llm"]},
+          "hat": {"type": ["string", "null"]},
+          "required_output_sections": {"type": "array", "items": {"type": "string"}},
+          "scale_gates": {"type": "array", "items": {"type": "string", "enum": ["MINIMAL", "STANDARD", "DEEP"]}},
+          "branch_label": {"type": "string", "enum": ["A", "B", "C", "D"]},
+          "join": {"type": "string", "enum": ["AND", "single"]}
+        },
+        "additionalProperties": true
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "kind"],
+        "properties": {
+          "from": {"type": "string"},
+          "to": {"type": "string"},
+          "kind": {"type": "string", "enum": ["forward", "back", "conditional", "dynamic"]},
+          "label": {"type": "string"}
+        }
+      }
+    },
+    "dynamic_templates": {
+      "type": "object",
+      "required": ["DOMAIN-TARGETED", "RANDOM-ENTRY", "REFRAME"],
+      "additionalProperties": false,
+      "properties": {
+        "DOMAIN-TARGETED": {"type": "object"},
+        "RANDOM-ENTRY":    {"type": "object"},
+        "REFRAME":         {"type": "object"}
+      }
+    },
+    "branch_labels": {
+      "type": "object",
+      "required": ["A", "B", "C", "D"],
+      "properties": {
+        "A": {"const": "LATERAL"},
+        "B": {"const": "SPREADING"},
+        "C": {"const": "SIMULATION"},
+        "D": {"const": "ADVERSARIAL"}
+      }
+    }
+  }
+}
