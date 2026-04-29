@@ -12,17 +12,6 @@ required_output_sections: [apus, headline]
 Extract **Atomic Processing Units** (APUs) from `input.md` + `stages/N1-RESTATE.md`.
 Every APU carries `source_quote` (verbatim input span) -- HG2 enforcement.
 
-## Outputs (written to `stages/N2-DECOMPOSE-APU.md`)
-- `apus`: list of objects with fields:
-  - `id`: `APU-NNN` (zero-padded, sequential from APU-001)
-  - `type`: one of `functional | requirement | behavior | invariant | interface | assumption | constraint`
-  - `provenance`: one of `stated | inferred`
-  - `confidence`: float in [0,1]
-  - `certainty_complexity_quadrant`: one of `known-known | known-unknown | unknown-known | unknown-unknown`
-  - `source_quote`: verbatim input span
-  - `non_goal`: omitted at this phase (set later by N-INTENT-LAYER)
-- `headline`: <=80 chars summary.
-
 ## Type taxonomy
 - `functional` / `requirement` / `behavior` are **test-eligible** (feed `coverage_falsifiability`).
 - `invariant` feeds Section 3.

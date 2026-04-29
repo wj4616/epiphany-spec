@@ -20,6 +20,3 @@ Emit verbatim `prefix_text`:
 Begin from scratch."
 
 Orchestrator prepends this text to the next N-SPREADING dispatch.
-
-## Outputs (`stages/N-DEFIXATION.md`)
-- `prefix_text`: the literal string above.

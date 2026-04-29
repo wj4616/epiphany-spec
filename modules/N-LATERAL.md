@@ -14,10 +14,6 @@ required_output_sections: [ideas, implicit_requirements]
 Lateral / implicit-requirements pass. Generate ideas that cover requirements
 the user has implied but not stated explicitly.
 
-## Outputs (`stages/N6-LATERAL.md`)
-- `ideas`: list of idea items (free-form, <=30 each in DEEP mode per S2 quantity gate).
-- `implicit_requirements`: list of inferred-but-unstated requirements (will become APUs at Phase 8).
-
 ## PROMPT TEMPLATE
 
 Current ledger digest:

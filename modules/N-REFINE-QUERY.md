@@ -13,10 +13,6 @@ On `[REJECT items: <ids>]` from Phase 12 gate: reformulate the rejected APU
 as a fresh question. Then routes to N-FALSIFY (S7 routing order: REFINE-QUERY
 first, then FALSIFY).
 
-## Outputs (`stages/N11-REFINE-QUERY.md`)
-- `reformulated_query`: text re-statement of the rejected APU as an unresolved question.
-- `target_apu_id`: APU-NNN being refined.
-
 ## PROMPT TEMPLATE
 
 Current ledger digest:

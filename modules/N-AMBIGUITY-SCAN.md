@@ -19,13 +19,6 @@ For a candidate synonym group `{term_A, term_B, ...}` with occurrence counts
 - Single-instance terms (`N_X = 1`) NEVER auto-resolve regardless of ratio.
 - Below 70% or single-instance: defer to N-CLARIFY-LOOP.
 
-## Outputs (`stages/N5-AMBIGUITY-SCAN.md`)
-- `vague_items`: list of unresolved hedge phrases / pronoun-overload sites.
-- `contradictions`: list of APU-pair contradictions.
-- `conflict_ledger`: list of `{conflict_id, items: [APU-A, APU-B], status: open|resolved}`.
-- `auto_resolved_synonyms`: list of `{group: [...], chosen: term, ratio: <float>}`.
-- `deferred_synonyms`: list of `{group, reason}` for N-CLARIFY-LOOP.
-
 ## PROMPT TEMPLATE
 
 Current ledger digest:

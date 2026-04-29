@@ -25,12 +25,6 @@ sub-modes determined by `session.md.input_kind` (written by N-INTAKE).
 - Save synthetic structure to `stages/N-RESTATE-synthetic-xml.md`.
 - Satisfies E2.
 
-## Outputs
-Written to `stages/N1-RESTATE.md`:
-- `paraphrased_intent` -- <=6 sentences capturing user intent verbatim where possible.
-- `structured_field_map` -- `{role, context, task, constraints[]}`.
-- `input_kind` -- copy of `session.md.input_kind` (carried forward for downstream).
-
 ## PROMPT TEMPLATE
 
 Current ledger digest:

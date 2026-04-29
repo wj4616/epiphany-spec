@@ -17,11 +17,6 @@ Pre-Phase-8 ideas use `(branch_name, branch_local_index)` tuples. On first-write
 here, the orchestrator maintains `session.md.pre_idea_id_map: { "<branch>:<idx>": <uuid> }`
 for back-reference.
 
-## Outputs (`stages/N8-IDEA-STRUCTURE.md`)
-- `idea_cards`: list of `{idea_id (UUID), shape_tag, core_mechanism, optimizes_for, sacrifices, dependencies (APU-NNN list), failure_modes, novelty_score, complexity_score, confidence}`.
-- `shape_tags`: closed vocabulary `{swap | wrap | split | merge | invert | defer}`. Appended to `session.md.locked_vocabulary` if not present.
-- `novelty_risk_plot`: text-rendered scatter (novelty x complexity).
-
 ## PROMPT TEMPLATE
 
 Current ledger digest:

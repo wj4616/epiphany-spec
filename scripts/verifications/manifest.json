@@ -1,0 +1,13 @@
+{
+  "checks": [
+    {"name": "V1",  "script": "v1_apu_coverage.py",            "phase": "post-grs-export"},
+    {"name": "V2",  "script": "v2_vocab_lock.py",              "phase": "post-grs-export"},
+    {"name": "V3",  "script": "v3_constraint_completeness.py", "phase": "post-grs-export"},
+    {"name": "V4",  "script": "v4_convergent_node_detection.py","phase": "pre-grs-export"},
+    {"name": "V5",  "script": "v5_topology_audit.py",          "phase": "pre-grs-export"},
+    {"name": "V6",  "script": "v6_falsifiability.py",          "phase": "post-grs-export"},
+    {"name": "V7a", "script": "v7a_structural.py",             "phase": "post-grs-export"},
+    {"name": "V7b", "script": "v7b_intent_alignment.py",       "phase": "post-grs-export"},
+    {"name": "V8",  "script": "v8_file_save.py",               "phase": "post-grs-export"}
+  ]
+}

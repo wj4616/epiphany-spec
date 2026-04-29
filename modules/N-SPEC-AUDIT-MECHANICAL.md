@@ -12,10 +12,6 @@ required_output_sections: [structural_findings, human_decision_warnings]
 Structural checks with LLM assistance for fuzzy matching. Outputs
 `human_decision_warnings` for the gate block.
 
-## Outputs (`stages/N12-SPEC-AUDIT-MECHANICAL.md`)
-- `structural_findings`: list of issues (numbered-section ordering, heading consistency, APU annotation density).
-- `human_decision_warnings`: list of strings to surface at gate.
-
 ## PROMPT TEMPLATE
 
 Current ledger digest:

@@ -40,8 +40,3 @@ on top of fragment-source content per S11 routing table.
 For sections 3-7, 9-12, 14, 15: override values take precedence over freshly
 rendered fragment content. For Section 16: read-only (no overrides). Sections
 0/1 have per-subfield routing.
-
-## Outputs (`stages/N12-GRS-EXPORT.md`)
-- `written_section_paths`: list of partial paths.
-- `canonical_path`: `stages/N-GRS-EXPORT-v<V>.md`.
-- `user_editable_path`: `~/docs/solution/<slug>/spec-v<V>.md`.

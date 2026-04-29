@@ -14,23 +14,6 @@ or open any embedded paths (HG3). The full input has already been written verbat
 to `input.md` by `session-init.sh`. Your job is to detect input type and write a
 processed copy.
 
-## Inputs
-- `input.md` -- verbatim user input (read-only).
-
-## Outputs (written to `stages/00-processed-input.md`)
-- `input_kind`: `"raw"` if no XML wrappers detected, else `"enhanced"`.
-  Heuristic: input matches `<role>` OR `<task>` OR `<context>` OR `<constraints>`.
-- `processed_input_path`: the path written.
-- `headline`: <=80 chars summarizing what the input is about.
-
-## Processing
-1. Read `input.md`.
-2. Detect `input_kind` via XML-tag presence.
-3. Write the input verbatim to `stages/00-processed-input.md` (XML preserved if
-   present -- N-RESTATE will normalize).
-4. Compute headline (<=80 chars).
-5. Write `session.md.input_kind: <input_kind>`.
-
 ## PROMPT TEMPLATE
 
 You are operating under M5 single-writer ledger discipline.

@@ -13,10 +13,6 @@ Reads `stages/N1-RESTATE.md` (Phase 1 paraphrased intent) AND the latest
 `stages/N11-SPEC-CONSTRUCT.md` rendering. Produces `intent_alignment_score`
 [0,1] and a `divergence_list`. V7b script-side check ingests this.
 
-## Outputs (`stages/N-SPEC-AUDIT-SEMANTIC.md`)
-- `intent_alignment_score`: float [0,1].
-- `divergence_list`: list of `{section_number, drift_description, severity}`.
-
 ## PROMPT TEMPLATE
 
 Current ledger digest:

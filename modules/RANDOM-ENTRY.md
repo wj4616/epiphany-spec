@@ -12,9 +12,6 @@ required_output_sections: [random_concepts]
 On D2 fire, generates 5 random concepts; feeds N-AGGREGATION as additional
 branch (NOT a replacement of N-SPREADING -- additive).
 
-## Outputs (`stages/RANDOM-ENTRY-<seq>.md`)
-- `random_concepts`: list of 5 concept items, each `{concept, why_random, possible_relevance}`.
-
 ## PROMPT TEMPLATE
 
 Current ledger digest:

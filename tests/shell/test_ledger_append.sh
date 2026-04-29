@@ -22,7 +22,7 @@ apus:
 - [ann-002] observation: "Two distinct functional clusters"
 EOF
 
-bash "$SCRIPT" \
+python3 "$SCRIPT" \
   --session-dir "$SD" \
   --node-id N-DECOMPOSE-APU \
   --phase 2 \
@@ -43,7 +43,7 @@ grep -q "annotations_picked_up: \[ann-N2-DECOMPOSE-APU-001, ann-N2-DECOMPOSE-APU
   || { echo FAIL annotation pickup; cat "$LEDGER"; exit 1; }
 
 # Re-running with no NEW annotations should produce a second entry with empty pickup.
-bash "$SCRIPT" \
+python3 "$SCRIPT" \
   --session-dir "$SD" \
   --node-id N-DECOMPOSE-APU \
   --phase 2 \
@@ -65,7 +65,7 @@ COUNT=$(grep -c "^## ledger-entry: " "$LEDGER")
 # literal text, NOT executed. If the script ran `whoami`, the ledger would
 # contain the username. We instead expect the literal characters to appear.
 INJECT='headline with `whoami` and $(uname) literal'
-bash "$SCRIPT" \
+python3 "$SCRIPT" \
   --session-dir "$SD" --node-id N-INJECT-TEST --phase 0 --cycle 99 \
   --fragment stages/N2-DECOMPOSE-APU.md --hat decomposer --tier medium \
   --exec-type inline --score 0.0 --signals '{}' --provenance-tags '[]' \

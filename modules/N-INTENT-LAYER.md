@@ -12,11 +12,6 @@ required_output_sections: [non_goals, in_scope, back_annotated_apu_ids]
 **Sole producer of `non_goal: true` flag on `session.md.apus[i]`** (SS22 item 35).
 Classify which APUs are out-of-scope and back-annotate them.
 
-## Outputs (written to `stages/N3-INTENT-LAYER.md` + back-annotation to session.md.apus)
-- `non_goals`: list of `{apu_id, reason}` items classified out-of-scope.
-- `in_scope`: list of APU IDs explicitly classified in-scope.
-- `back_annotated_apu_ids`: list of APU IDs whose `non_goal: true` flag was set.
-
 ## HG2 interaction
 Non-goal-listed APUs satisfy HG2 via the "referenced" path (Section 12 surfaces
 them). N-SPEC-CONSTRUCT preservation-check refuses to omit any APU not marked

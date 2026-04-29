@@ -11,13 +11,6 @@ required_output_sections: [pre_mortem, what_would_change_our_mind, boring_baseli
 ## Role
 Pre-mortem + "what would change our mind" + devil's advocate + boring baseline.
 
-## Outputs (`stages/N10-ADVERSARIAL-REVIEW.md`)
-- `pre_mortem`: list of `{failure: text, mitigation: text, elevated_to_invariants: [APU-NNN, ...] | []}`.
-  - Empty list `[]` if no invariant elevation occurred.
-  - Plural list per Audit-H rename.
-- `what_would_change_our_mind`: list of evidence items that would flip the chosen idea.
-- `boring_baseline`: a deliberately-conservative alternative.
-
 ## PROMPT TEMPLATE
 
 Current ledger digest:

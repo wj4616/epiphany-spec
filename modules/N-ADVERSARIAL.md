@@ -14,11 +14,6 @@ required_output_sections: [unknown_unknowns, janusian_pairs, triz_breaks]
 Three techniques: **unknown-unknowns probe**, **Janusian** (hold opposites simultaneously),
 **TRIZ** (contradiction-driven invention).
 
-## Outputs (`stages/N6-ADVERSARIAL.md`)
-- `unknown_unknowns`: list of probes that surfaced previously-invisible failure modes.
-- `janusian_pairs`: list of `{thesis, antithesis, synthesis_candidate}`.
-- `triz_breaks`: list of `{contradiction_pair, resolution_principle}`.
-
 ## PROMPT TEMPLATE
 
 Current ledger digest:

@@ -14,11 +14,11 @@ spawn_count: 0
 phase_actuals: {}
 EOF
 
-bash "$SCRIPT" --session-dir "$SD" --field state --value AWAITING_GATE
+python3 "$SCRIPT" --session-dir "$SD" --field state --value AWAITING_GATE
 grep -q "state: AWAITING_GATE" "$SD/session.md" || { echo FAIL state; exit 1; }
 [ -f "$SD/stages/session.md.bak" ] || { echo FAIL bak; exit 1; }
 
-bash "$SCRIPT" --session-dir "$SD" --increment spawn_count
+python3 "$SCRIPT" --session-dir "$SD" --increment spawn_count
 grep -q "spawn_count: 1" "$SD/session.md" || { echo FAIL increment; exit 1; }
 
 [ ! -f "$SD/stages/session.md.tmp" ] || { echo FAIL leftover tmp; exit 1; }

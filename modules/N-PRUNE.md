@@ -11,12 +11,6 @@ required_output_sections: [chosen_idea, rejected_alternatives, tradeoff_matrix, 
 ## Role
 Pareto + tradeoff matrix + hybrid pass + kill criteria. Single chosen idea + ranked rejects.
 
-## Outputs (`stages/N10-PRUNE.md`)
-- `chosen_idea`: `{idea_id, kill_reason: null}` -- the single recommendation.
-- `rejected_alternatives`: list of `{idea_id, kill_reason, dominated_by: idea_id|null}`.
-- `tradeoff_matrix`: M x N table (ideas x dimensions).
-- `kill_criteria`: criteria that, if met, would invalidate the chosen idea.
-
 ## Idea-level rejection re-entry path (S22 item 48)
 `[REJECT items: 14.1]` -> orchestrator routes back to THIS node for re-execution
 with rejected idea filtered out (NOT to N-REFINE-QUERY/N-FALSIFY).

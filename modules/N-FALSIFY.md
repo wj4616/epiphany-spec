@@ -12,11 +12,6 @@ required_output_sections: [requirements]
 For every test-eligible APU (`type in {functional, requirement, behavior}`),
 emit an `R-NNN` entry with both `test:` and `break_attempt:`.
 
-## Outputs (`stages/N11-FALSIFY.md`)
-- `requirements`: list of `{id: R-NNN, apu_id, test, break_attempt}`.
-  - `test`: how we'd know the requirement has been met.
-  - `break_attempt`: "Construct an input where this would produce a wrong answer." -> result.
-
 ## V6 + coverage_falsifiability dependence
 - V6 verifies every R-NNN has both fields populated.
 - `coverage_falsifiability` = `apus_with_falsifiable_req / total_test_eligible_apus`.

@@ -13,12 +13,6 @@ required_output_sections: [convergent_nodes, contradictions, coverage_gaps]
 Aggregate Phase 6 branch outputs. Surface convergent nodes (cross-branch),
 contradictions, and **coverage_gaps** (the D1 trigger source).
 
-## Outputs (`stages/N7-AGGREGATION.md` + populates `session.md.convergent_nodes`)
-- `convergent_nodes`: same schema as N-SPREADING, but `branches_activated_by` may span all 4 branches.
-- `contradictions`: cross-branch contradictions.
-- `coverage_gaps`: list of `{domain_class, criticality: float [0,1], rationale}`. Max 5 entries (S6).
-  - `criticality` drives D1 cap-overflow priority.
-
 ## D1 trigger interaction
 Non-empty `coverage_gaps` -> D1 fires. For each gap, orchestrator instantiates
 `DOMAIN-TARGETED` with that `domain_class`. After all DOMAIN-TARGETED outputs

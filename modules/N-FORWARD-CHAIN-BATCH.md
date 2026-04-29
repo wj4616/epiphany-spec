@@ -17,9 +17,6 @@ execution mode differs.
 DEEP + `apu_count > 30` + any D-trigger fired this cycle: degrade to inline
 (frees 1 spawn slot). Log `[FORWARD-CHAIN-BATCH-DEGRADE-INLINE ...]`.
 
-## Outputs (`stages/N11-FORWARD-CHAIN-BATCH.md`)
-- `chained_implications`: list of `{from_apu_id, implies: [APU-NNN, ...], reasoning}`.
-
 ## PROMPT TEMPLATE
 
 Current ledger digest:

@@ -14,10 +14,6 @@ question. The orchestrator emits the questions block and pauses (state ->
 `AWAITING_CLARIFY`). On the user's next message, parse answers (one per
 question, ordered or labeled `Q1/Q2/...`).
 
-## Outputs (`stages/N5-CLARIFY-LOOP.md`)
-- `open_questions`: list of `{q_id, apu_refs, question_text}`.
-- `answers_received`: list of `{q_id, answer_text}` (populated post-resume).
-
 ## Skip path
 `[SKIP]` reply -> unanswered items append to `session.md.open_questions_queue`
 and surface again at Phase 12.

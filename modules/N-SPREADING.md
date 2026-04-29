@@ -14,11 +14,6 @@ required_output_sections: [activation_map, convergent_nodes, convergent_node_cou
 **M1 activation map.** For each APU seed, fire associated concept chains.
 Convergent nodes are flagged where >= 2 chains intersect.
 
-## Outputs (`stages/N6-SPREADING.md`)
-- `activation_map`: list of `{apu_seed, fired_chain: [concept_a, concept_b, ...]}`.
-- `convergent_nodes`: list of `{concept, branches_activated_by, signal_strength: int >=2, provenance, activation_weight: 1.0}`.
-- `convergent_node_count`: `len(convergent_nodes)`.
-
 ## D2 trigger interaction
 - MINIMAL threshold: `convergent_node_count == 0` -> D2 fires.
 - STANDARD: `< 3`.

@@ -24,10 +24,6 @@ required_output_sections: [score, trigger_mode]
 ## Trigger
 After EVERY node output. Orchestrator selects mode at dispatch time.
 
-## Outputs (appended to `session.md.idea_refinement_history` for ideas, or to fragment for nodes)
-- `score`: float in [0,1].
-- `trigger_mode`: `"llm" | "deterministic"`.
-
 ## PROMPT TEMPLATE  (LLM-judged path only)
 
 Current ledger digest:

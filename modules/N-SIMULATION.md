@@ -16,11 +16,6 @@ Three techniques (S4 Phase 6, S22 item 16):
 2. **Edge-case forcing** -- push parameters to boundary values; expose hidden constraints.
 3. **Cross-domain transfer** -- map onto an isomorphic domain; simulate outcomes there.
 
-## Outputs (`stages/N6-SIMULATION.md`)
-- `scenarios`: list of `{condition_set, projected_outcome, surfaced_assumption}`.
-- `edge_cases`: list of `{parameter, boundary_value, exposed_constraint}`.
-- `cross_domain_transfers`: list of `{source_domain, target_domain, isomorphism, simulated_outcome}`.
-
 ## PROMPT TEMPLATE
 
 Current ledger digest:

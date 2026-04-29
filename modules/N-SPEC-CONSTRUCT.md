@@ -17,10 +17,6 @@ Refuses to omit any APU not explicitly marked `non_goal: true` (set by
 N-INTENT-LAYER at Phase 3). N-SPEC-CONSTRUCT reads `session.md.apus[i].non_goal`
 at section-build time.
 
-## Outputs (`stages/N11-SPEC-CONSTRUCT.md`)
-- `sections`: list of `{number: 1..16, body: markdown}` (Handoff Bundle is built by N-GRS-EXPORT).
-- `hints`: list of strings for Section 6 (Implementation Hints).
-
 ## V-check re-route interaction (S10)
 - V1a/V1b/V7a/V7b -> re-execute this node with section regeneration.
 - V2 -> re-execute with vocabulary-lock pass against `session.md.locked_vocabulary`.

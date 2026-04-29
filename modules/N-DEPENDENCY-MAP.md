@@ -12,9 +12,6 @@ required_output_sections: [dependency_edges]
 LLM-driven rendering of N-FALSIFY's `requirements` into a human-readable
 dependency summary (Section 15).
 
-## Outputs (`stages/N11-DEPENDENCY-MAP.md`)
-- `dependency_edges`: list of `{from: R-NNN, constrains: [R-NNN], implies: [R-NNN], conflicts: [R-NNN]}`.
-
 ## V check interaction (`coverage_dependency_map`)
 Denominator = `len(N-FALSIFY output.requirements)` (S22 item 5). Requirements
 absent from this output entirely count as uncovered.

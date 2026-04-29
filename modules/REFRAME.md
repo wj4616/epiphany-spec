@@ -12,10 +12,6 @@ required_output_sections: [reframed_idea, frame_history_entry]
 On D3 stagnation: replace stagnant idea card body. The `idea_id` (UUID)
 SURVIVES; only `frame` and `frame_history` mutate.
 
-## Outputs (`stages/REFRAME-<seq>.md`)
-- `reframed_idea`: full new idea card payload.
-- `frame_history_entry`: `{frame: <prior frame>, replaced_at: <ISO8601>, reason: <D3>}`.
-
 ## PROMPT TEMPLATE
 
 Current ledger digest:

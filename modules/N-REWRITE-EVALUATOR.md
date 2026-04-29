@@ -30,8 +30,3 @@ as additive. Per-cycle re-fire limit: 2.
 Trigger: `|score_n - score_{n-1}| <= 0.05` across 2 consecutive refinement passes
 on the same idea_id, **within the same `reframe_seq` group**.
 Action: instantiate REFRAME (max 2 per idea_id; on 3rd skip + add to open_questions_queue).
-
-## Outputs (`stages/N-REWRITE-EVALUATOR-<seq>.md`, written only on fire)
-- `fired_triggers`: subset of `[D1, D2, D3]`.
-- `instantiated_nodes`: list of `{template, fresh_seq_id, reason, triggered_by_node}`.
-- All entries also appended to `topology-trace.md`.

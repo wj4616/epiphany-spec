@@ -13,16 +13,6 @@ required_output_sections: [injected_nodes, source_sessions, scan_ts, stopwords_h
 algorithm in SS8 of the design doc using `scripts/cross_run_index.py` and
 `scripts/seed_similarity.py`.
 
-## Inputs
-- `session.md.topic_slug` (canonical, written by `session-init.sh` step 5).
-- `~/docs/epiphany/spec/cross_run_index.json` (or rebuild).
-
-## Outputs (written to `stages/N0_5-CROSS-RUN-SEED.md` + `session.md.cross_run_seed`)
-- `injected_nodes`: list of `{concept, activation_weight=0.6, provenance: [...]}`.
-- `source_sessions`: list of session_ids retained (top-3).
-- `scan_ts`: ISO8601.
-- `stopwords_hash`: SHA-256 of frozen stopword list.
-
 ## Algorithm (SS8 steps 1-5)
 1. Load index via `cross_run_index.load_or_rebuild(base)`.
 2. Read `session.md.topic_slug`.

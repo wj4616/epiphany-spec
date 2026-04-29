@@ -12,10 +12,6 @@ required_output_sections: [targeted_findings, domain_class]
 Instantiated dynamically per coverage gap from N-AGGREGATION. Surveys a
 specific `domain_class` for missing concepts.
 
-## Outputs (`stages/DOMAIN-TARGETED-<seq>.md`)
-- `targeted_findings`: concepts/requirements/constraints discovered in the targeted domain.
-- `domain_class`: the gap identifier (echoed back for AGG re-fire join).
-
 ## PROMPT TEMPLATE
 
 Current ledger digest:

@@ -15,10 +15,6 @@ required_output_sections: [constraints, enumeration_complete]
 
 For Soft and Ghost constraints, MANDATORY field `solutions_opened_if_removed: [...]`.
 
-## Outputs (`stages/N4-CONSTRAINT-INVENTORY.md`)
-- `constraints`: list of `{id: C-NNN, statedness, severity, apu: APU-NNN, text, solutions_opened_if_removed?, flag?}`.
-- `enumeration_complete`: bool -- MUST be true before phase advances (V3 enforces).
-
 ## PROMPT TEMPLATE
 
 Current ledger digest:
