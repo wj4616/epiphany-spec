@@ -17,13 +17,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
 GRAPH_PATH = REPO / "graph.json"
-HATS_PATH  = REPO / "hats.json"
 SCHEMA_PATH = REPO / "graph.schema.json"
 
 REQUIRED_SCRIPTS = [
@@ -41,54 +40,17 @@ REQUIRED_SCRIPTS = [
     "scripts/validate-graph.py",
 ]
 
-LEDGER_PLACEHOLDER = "{{ledger_at_dispatch}}"
-MCP_REGEX = re.compile(r"mcp__[A-Za-z0-9_\-]+")
+from scripts._module_validators import (
+    check_module_completeness,
+    check_ledger_placeholder,
+    check_no_mcp,
+    LEDGER_PLACEHOLDER,
+)
 
 
 def load_json(path: Path) -> dict:
     with open(path) as f:
         return json.load(f)
-
-
-def check_module_completeness(graph: dict) -> list[str]:
-    errors: list[str] = []
-    for n in graph["nodes"]:
-        mod = REPO / n["module_file"]
-        if not mod.exists():
-            errors.append(f"PRC1.1: missing module file {mod}")
-    for tname, tmpl in graph["dynamic_templates"].items():
-        mod = REPO / tmpl["module_file"]
-        if not mod.exists():
-            errors.append(f"PRC1.1: missing dynamic-template module {mod}")
-    return errors
-
-
-def check_ledger_placeholder(graph: dict, hats: dict) -> list[str]:
-    errors: list[str] = []
-    no_llm_hats: set[str] = set(hats["tiers"]["no-llm"])
-    for n in graph["nodes"]:
-        if n["tier"] == "no-llm":
-            continue
-        mod = REPO / n["module_file"]
-        if not mod.exists():
-            continue  # caught by check 1
-        body = mod.read_text()
-        if LEDGER_PLACEHOLDER not in body:
-            errors.append(f"PRC1.2: {n['id']} prompt missing {LEDGER_PLACEHOLDER}")
-    return errors
-
-
-def check_no_mcp(graph: dict) -> list[str]:
-    errors: list[str] = []
-    for n in graph["nodes"]:
-        mod = REPO / n["module_file"]
-        if not mod.exists():
-            continue
-        body = mod.read_text()
-        m = MCP_REGEX.search(body)
-        if m:
-            errors.append(f"PRC1.3: {n['id']} references {m.group()}")
-    return errors
 
 
 def check_script_presence() -> list[str]:
@@ -202,12 +164,11 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
 
     graph = load_json(GRAPH_PATH)
-    hats  = load_json(HATS_PATH)
 
     errors: list[str] = []
     if not args.skip_modules:
         errors += check_module_completeness(graph)
-        errors += check_ledger_placeholder(graph, hats)
+        errors += check_ledger_placeholder(graph)
         errors += check_no_mcp(graph)
     errors += check_script_presence()
     if args.session_dir is not None:
