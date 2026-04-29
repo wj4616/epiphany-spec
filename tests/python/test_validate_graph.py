@@ -124,7 +124,6 @@ import pytest as _pytest
 SCRIPT = REPO / "scripts" / "validate-graph.py"
 
 
-@_pytest.mark.xfail(reason="PRC1.4 script presence: remaining scripts arrive in Tasks 6-13")
 def test_validate_graph_runs_clean_on_static_config(tmp_path):
     # No --session-dir → skip check 5
     result = subprocess.run(
@@ -134,7 +133,6 @@ def test_validate_graph_runs_clean_on_static_config(tmp_path):
     assert result.returncode == 0, result.stderr
 
 
-@_pytest.mark.xfail(reason="PRC1.4 script presence: remaining scripts arrive in Tasks 6-13")
 def test_validate_graph_session_check_pass(tmp_path):
     sd = tmp_path / "abc-uuid"
     (sd / "stages").mkdir(parents=True)
@@ -154,14 +152,13 @@ def test_validate_graph_session_check_pass(tmp_path):
     assert result.returncode == 0, result.stderr
 
 
-def test_validate_graph_fails_on_missing_module(tmp_path):
-    # Run WITHOUT --skip-modules: modules/ is empty → must fail check #1.
+def test_validate_graph_passes_with_all_modules_present(tmp_path):
+    # Run WITHOUT --skip-modules: all modules exist → must pass all checks.
     result = subprocess.run(
         ["python3", str(SCRIPT)],
         capture_output=True, text=True, cwd=str(REPO),
     )
-    assert result.returncode != 0
-    assert "module" in (result.stdout + result.stderr).lower()
+    assert result.returncode == 0, result.stderr
 
 
 def test_validate_graph_session_check_fail_dirty_dir(tmp_path):
@@ -176,4 +173,4 @@ def test_validate_graph_session_check_fail_dirty_dir(tmp_path):
         capture_output=True, text=True, cwd=str(REPO),
     )
     assert result.returncode != 0
-    assert "session" in (result.stdout + result.stderr).lower()
+    assert "non-empty" in (result.stdout + result.stderr).lower()

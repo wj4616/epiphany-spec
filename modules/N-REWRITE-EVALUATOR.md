@@ -1,0 +1,37 @@
+---
+node_id: N-REWRITE-EVALUATOR
+phase: cross-cutting
+hat: null
+exec_type: inline
+required_output_sections: [fired_triggers, instantiated_nodes]
+---
+
+# N-REWRITE-EVALUATOR -- Cross-cutting (no-llm)
+
+## Role
+After every node completion: evaluate D1, D2, D3 boolean triggers (per S6).
+**Writes to `topology-trace.md` ONLY when a trigger fires AND produces an
+instantiation** -- not on every no-op evaluation.
+
+## D1 -- Coverage Gap
+Trigger: `N-AGGREGATION.coverage_gaps` non-empty.
+Action: instantiate `DOMAIN-TARGETED` per gap; re-fire N-AGGREGATION once after
+all DOMAIN-TARGETED outputs ready. D1 + D2 co-fire: D1 first.
+
+## D2 -- Thin Spread
+Trigger: `N-SPREADING.convergent_node_count` below mode threshold:
+- MINIMAL: `= 0`
+- STANDARD: `< 3`
+- DEEP: `< 5`
+Action: re-fire N-SPREADING with N-DEFIXATION prefix; instantiate RANDOM-ENTRY
+as additive. Per-cycle re-fire limit: 2.
+
+## D3 -- Score Stagnation
+Trigger: `|score_n - score_{n-1}| <= 0.05` across 2 consecutive refinement passes
+on the same idea_id, **within the same `reframe_seq` group**.
+Action: instantiate REFRAME (max 2 per idea_id; on 3rd skip + add to open_questions_queue).
+
+## Outputs (`stages/N-REWRITE-EVALUATOR-<seq>.md`, written only on fire)
+- `fired_triggers`: subset of `[D1, D2, D3]`.
+- `instantiated_nodes`: list of `{template, fresh_seq_id, reason, triggered_by_node}`.
+- All entries also appended to `topology-trace.md`.
