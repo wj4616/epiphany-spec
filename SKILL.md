@@ -173,10 +173,57 @@ pause, rework-confirm) emit the envelope but DO NOT raise errors --
 they're pause signals. All others terminate the pipeline.
 
 ## PRC1 — PRE-RUN CHECK
-(filled in Task 30)
+
+Run **before** any node fires. Failure on any check = HALT with diagnostic message.
+
+| # | Check | Pass condition |
+|---|---|---|
+| 1 | Module completeness | Every node in active topology has `modules/N*.md`. |
+| 2 | Ledger placeholder | Every LLM-backed module's prompt template contains `{{ledger_at_dispatch}}`. **No-llm tier nodes are exempt** -- read `hats.json` tier to filter. |
+| 3 | No MCP references | No module's prompt template references `mcp__dify-*`. |
+| 4 | Script presence | All scripts listed in S3 of design brief exist and are executable. |
+| 5 | Session isolation | Post-init directory contents match expected state. |
+
+Mechanized check: `python3 scripts/validate-graph.py [--session-dir <path>]`.
+You MAY invoke this script via Bash whitelist; on non-zero exit, parse stderr
+for `PRC1.<n>:` prefixes and HALT with the listed reasons.
+
+PRC1 check 5 is a **post-init content sanity check** (covers external tampering
+between session-init.sh completion and PRC1 execution). Prior-run isolation is
+enforced INSIDE session-init.sh step 1 BEFORE directory creation.
 
 ## SESSION INIT
-(filled in Task 30)
+
+**Step 1 (orchestrator only):** generate `session_id` UUID v4 in memory. Do NOT
+yet write to `session.md` (it doesn't exist). Immediately assert
+`~/docs/epiphany/spec/<session_id>/` does not already exist; if it does, HALT
+with `[SESSION-ISOLATION-FAIL -- UUID collision detected; investigate external
+tampering]`. UUID v4 collision probability ~ 10^{-36}; this guard covers external
+directory creation only.
+
+**Step 2..7 (delegated to script):** invoke
+
+```
+bash ~/.claude/skills/epiphany-spec/scripts/session-init.sh \
+  --session-id <UUID> \
+  --input-file <path-to-input> \
+  --session-base ~/docs/epiphany/spec \
+  --solution-base ~/docs/solution \
+  --mode {MINIMAL|STANDARD|DEEP} \
+  --flags "<raw flag string>" \
+  --date "$(date '+%d-%m')"
+```
+
+The script writes the verbatim input.md, computes `topic_slug`, initializes
+`session.md` with the captured `session_id`, creates `spec-export` symlink, and
+empty-initializes `grs-ledger.md` and `topology-trace.md`. It prints the
+resolved session directory on stdout line 1 and `topic_slug:` on line 2.
+
+After session-init.sh returns: run PRC1 with `--session-dir <path>` to confirm
+clean post-init content (check 5).
+
+**Cross-run seed (Phase 0.5)** is its OWN node (N-CROSS-RUN-SEED) and runs after
+PRC1, before Phase 1. Driven by `scripts/cross_run_index.py` + `scripts/seed_similarity.py`.
 
 ## PHASE CHAIN — READY-SET DISPATCH
 (filled in Task 31)
