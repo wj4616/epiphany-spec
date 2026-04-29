@@ -18,27 +18,11 @@ import re
 import sys
 from pathlib import Path
 
-import yaml
+from ._common import CITATION_STRICT, CITATION_BROAD, HEADER, split_sections, load_apus
 
 EXEMPT_SECTIONS = {1, 2, 12, 13, 14}
-CITATION_STRICT = re.compile(r"\[APU-\d{3,}\]")
-CITATION_BROAD  = re.compile(r"\bAPU-\d{3,}\b")
-HEADER = re.compile(r"^##\s+(\d{1,2})\.\s+", re.MULTILINE)
 SECTION_8_HEADER = re.compile(r"^##\s+8\.\s+", re.MULTILINE)
 SECTION_9_HEADER = re.compile(r"^##\s+9\.\s+", re.MULTILINE)
-
-
-def split_sections(spec_text: str) -> dict[int, str]:
-    out: dict[int, str] = {}
-    matches = list(HEADER.finditer(spec_text))
-    for i, m in enumerate(matches):
-        sec = int(m.group(1))
-        if not (1 <= sec <= 16):
-            continue
-        start = m.end()
-        end = matches[i + 1].start() if i + 1 < len(matches) else len(spec_text)
-        out[sec] = spec_text[start:end]
-    return out
 
 
 def _strip_section_8(text: str) -> str:
@@ -48,12 +32,6 @@ def _strip_section_8(text: str) -> str:
     m9 = SECTION_9_HEADER.search(text, pos=m8.end())
     end = m9.start() if m9 else len(text)
     return text[: m8.start()] + text[end:]
-
-
-def _load_apus(session_md_path: Path) -> list[str]:
-    data = yaml.safe_load(session_md_path.read_text()) or {}
-    apus = data.get("apus") or []
-    return [a["id"] if isinstance(a, dict) else str(a) for a in apus]
 
 
 def run(spec_path: Path, session_md_path: Path) -> dict:
@@ -71,7 +49,7 @@ def run(spec_path: Path, session_md_path: Path) -> dict:
     # (b) orphan APUs
     cite_corpus = _strip_section_8(text)
     cited = set(CITATION_BROAD.findall(cite_corpus))
-    declared = _load_apus(Path(session_md_path))
+    declared = load_apus(Path(session_md_path))
     uncited = [a for a in declared if a not in cited]
 
     if missing_sections or uncited:
