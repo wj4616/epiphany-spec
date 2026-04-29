@@ -161,6 +161,29 @@ def test_validate_graph_passes_with_all_modules_present(tmp_path):
     assert result.returncode == 0, result.stderr
 
 
+def test_forward_chain_batch_has_exec_decision():
+    """F110 — F012 fields exec_type_alternatives + exec_decision must persist
+    on N-FORWARD-CHAIN-BATCH (regression catch for accidental field removal)."""
+    g = _load_graph()
+    by_id = {n["id"]: n for n in g["nodes"]}
+    n = by_id["N-FORWARD-CHAIN-BATCH"]
+    assert n.get("exec_decision"), "exec_decision must be present"
+    assert "spawn" in (n.get("exec_type_alternatives") or []), \
+        "exec_type_alternatives must include 'spawn'"
+
+
+def test_graph_validates_against_schema():
+    """F110 — assert graph.json conforms to graph.schema.json."""
+    try:
+        import jsonschema  # type: ignore
+    except ImportError:
+        import pytest
+        pytest.skip("jsonschema not installed")
+    g = _load_graph()
+    s = json.loads((REPO / "graph.schema.json").read_text())
+    jsonschema.validate(g, s)  # raises on violation
+
+
 def test_validate_graph_session_check_fail_dirty_dir(tmp_path):
     sd = tmp_path / "dirty-uuid"
     (sd / "stages").mkdir(parents=True)
