@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""_ledger_append.py — F103 fix.
+"""ledger_append.py — F103 fix.
 
 Replaces the heredoc-based ledger writer (which was vulnerable to Bash
 command injection through LLM-supplied --headline values containing backticks

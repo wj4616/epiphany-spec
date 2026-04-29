@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""_build_prompt.py — emit a substituted prompt for a module dispatch (I105).
+"""build_prompt.py — emit a substituted prompt for a module dispatch (I105).
 
 Reads modules/<X>.md, runs ledger-digest, substitutes {{ledger_at_dispatch}}
 and any other declared placeholders, asserts no `{{` remains, prints to
@@ -28,7 +28,7 @@ def _read_module(path: Path) -> tuple[str, str]:
 
 def _ledger_digest(session_dir: Path) -> str:
     out = subprocess.run(
-        ["bash", str(REPO / "scripts" / "ledger-digest.sh"),
+        ["python3", str(REPO / "scripts" / "ledger_digest.py"),
          "--session-dir", str(session_dir),
          "--max-entries", "8", "--max-bytes", "8192"],
         capture_output=True, text=True, check=True,

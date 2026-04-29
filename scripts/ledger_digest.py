@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""_ledger_digest.py — deterministic ledger digest emission (F106).
+"""ledger_digest.py — deterministic ledger digest emission (F106).
 
 Algorithm: emit the last K complete ledger-entry blocks (where K =
 min(--max-entries, total_entries)) in their raw markdown form,

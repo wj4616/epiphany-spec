@@ -120,7 +120,7 @@ phase_budgets: {}
 phase_actuals: {}
 section_overrides: {}
 abort_metadata: null
-created_ts: $TIMESTAMP
+created_ts: \"$TIMESTAMP\"
 solution_dir: $SOLUTION_DIR
 EOF
 

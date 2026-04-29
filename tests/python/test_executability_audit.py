@@ -20,12 +20,12 @@ TEXT = SKILL.read_text()
 
 def test_no_ambiguous_digest_without_algorithm_reference():
     """F106-class — `digest` and `summarize` must be paired with a script
-    reference (build-prompt.sh, ledger-digest.sh) so the operation is
+    reference (build_prompt.py, ledger_digest.py) so the operation is
     deterministic."""
     matches = []
     for m in re.finditer(r"\b(digest|summarize)\b", TEXT, re.IGNORECASE):
         window = TEXT[m.start():m.start() + 400]
-        if "ledger-digest.sh" in window or "build-prompt.sh" in window or "scripts/" in window:
+        if "ledger_digest.py" in window or "build_prompt.py" in window or "scripts/" in window:
             continue
         if re.search(r"\b" + re.escape(m.group()) + r"\.(?:sh|py)\b", window, re.IGNORECASE):
             continue

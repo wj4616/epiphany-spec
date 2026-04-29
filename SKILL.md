@@ -248,7 +248,7 @@ The orchestrator picks ready nodes in graph-declared order:
 1. Resolve next ready node `N`.
 2. Look up tier via `hats.json[N.hat]`.
 3. Compose `{{ledger_at_dispatch}}` by invoking
-   `bash scripts/ledger-digest.sh --session-dir <SD> --max-entries 8 --max-bytes 8192`
+   `python3 scripts/ledger_digest.py --session-dir <SD> --max-entries 8 --max-bytes 8192`
    and substituting its stdout into the prompt template (F106 — deterministic;
    no orchestrator-side summarization).
 4. Dispatch:
@@ -257,7 +257,7 @@ The orchestrator picks ready nodes in graph-declared order:
      conforming to `required_output_sections`.
    - **inline (no-llm)**: execute the module's "Algorithm" section as pure
      orchestrator logic. NO LLM call.
-   - **spawn**: invoke `bash scripts/build-prompt.sh --module modules/<X>.md
+   - **spawn**: invoke `python3 scripts/build_prompt.py --module modules/<X>.md
      --session-dir <SD>` to produce a fully-substituted prompt body
      (F111 -- substitution is script-side; an orchestrator that omits this
      step gets a `[DISPATCH-PLACEHOLDER-LEAK]` halt rather than a silent
@@ -267,7 +267,7 @@ The orchestrator picks ready nodes in graph-declared order:
 5. Write fragment to `stages/N<P>-<NodeName>[-<seq>].md` per S3 fragment naming.
 6. Run **N-SCORE** (mixed tier -- see modules/N-SCORE.md): LLM-judged for
    creative-divergence nodes, deterministic for templating/transformation.
-7. Append ledger entry: `bash scripts/ledger-append.sh --session-dir ... --node-id <N>
+7. Append ledger entry: `python3 scripts/ledger_append.py --session-dir ... --node-id <N>
    --phase <P> --cycle <C> --fragment <path> --hat <hat> --tier <tier>
    --exec-type <type> --score <s> --signals '<json>' --provenance-tags '<list>'
    --headline '<text>'`.
@@ -281,7 +281,7 @@ The orchestrator picks ready nodes in graph-declared order:
 ### Spawn budget tracking
 Maintain `session.md.spawn_count` (initialized to 0 by `session-init.sh`,
 F014). On every `Agent` dispatch: `session.md.spawn_count += 1` via
-`scripts/session-md-update.sh` (atomic -- see F009 fix). Compare to mode soft
+`scripts/session_md_update.py` (atomic -- see F009 fix). Compare to mode soft
 + hard caps from graph.json mode table. On near-overflow
 (`spawn_count + planned_spawns >= soft_cap`): emit `[SPAWN-NEAR-CAP soft=<S>
 actual=<A>]` informational. On hard cap: trigger cap-overflow policy
@@ -394,7 +394,7 @@ Two pause points share one mechanism:
 ### Pause sequence
 1. Emit prompt block (clarifying questions OR gate options) as plain chat text.
 2. Update `session.md.state` AND `session.md.pause_ts` (ISO8601 of pause entry)
-   on disk via `scripts/session-md-update.sh` (F009; atomic tmp+fsync+rename+bak).
+   on disk via `scripts/session_md_update.py` (F009; atomic tmp+fsync+rename+bak).
 3. STOP emitting tool calls -- natural Claude Code pause.
 
 ### Pause-time accounting (F016)

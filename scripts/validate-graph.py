@@ -28,12 +28,17 @@ SCHEMA_PATH = REPO / "graph.schema.json"
 
 REQUIRED_SCRIPTS = [
     "scripts/session-init.sh",
-    "scripts/ledger-append.sh",
     "scripts/spec-chunk-write.sh",
-    "scripts/seed-similarity.py",
-    "scripts/cross_run_index.py",
-    "scripts/validate-graph.py",
     "scripts/validate-spec-doc.sh",
+    "scripts/finalize-spec.sh",
+    "scripts/seed_similarity.py",
+    "scripts/cross_run_index.py",
+    "scripts/ledger_append.py",
+    "scripts/session_md_update.py",
+    "scripts/ledger_digest.py",
+    "scripts/build_prompt.py",
+    "scripts/compute_completeness.py",
+    "scripts/validate-graph.py",
 ]
 
 LEDGER_PLACEHOLDER = "{{ledger_at_dispatch}}"

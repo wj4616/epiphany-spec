@@ -3,7 +3,7 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
-SCRIPT="$REPO/scripts/session-md-update.sh"
+SCRIPT="$REPO/scripts/session_md_update.py"
 
 TMP=$(mktemp -d); trap "rm -rf $TMP" EXIT
 SD="$TMP/sess"; mkdir -p "$SD/stages"

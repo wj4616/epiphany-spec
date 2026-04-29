@@ -3,7 +3,7 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
-SCRIPT="$REPO/scripts/ledger-append.sh"
+SCRIPT="$REPO/scripts/ledger_append.py"
 
 TMP=$(mktemp -d); trap "rm -rf $TMP" EXIT
 SD="$TMP/sess"; mkdir -p "$SD/stages"
