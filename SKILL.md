@@ -310,19 +310,354 @@ the best available N-SPREADING output (highest `convergent_node_count` across
 attempts), surface as gate warning.
 
 ## DYNAMIC REWRITE (D1 / D2 / D3)
-(filled in Task 32)
+
+Evaluated by N-REWRITE-EVALUATOR (no-llm) AFTER every node completion.
+N-REWRITE-EVALUATOR writes to `topology-trace.md` ONLY when a trigger fires
+AND produces an instantiation.
+
+### D1 — Coverage Gap
+- **Trigger:** N-AGGREGATION emits `coverage_gaps` non-empty (≤5 entries).
+- **Action:** for each gap, instantiate `DOMAIN-TARGETED` with the gap's
+  `domain_class` (priority: highest `criticality` first). After all
+  DOMAIN-TARGETED outputs ready, re-fire N-AGGREGATION ONCE (AND-join over
+  original branches + new domain-targeted outputs).
+- **Spawn cost:** 1 slot per DOMAIN-TARGETED + 1 for AGG re-fire.
+- **Cap-overflow:** (1) fill highest-criticality gaps first; (2) degrade
+  remaining DOMAIN-TARGETED to inline; (3) skip-and-flag if inline also fails.
+  AGG re-fire is NEVER degraded -- if its slot isn't available, abort D1
+  and log `[D1-AGGREGATION-REFIRE-SKIPPED]`.
+- **Phase 8 gating:** Phase 8 is HELD on most recent N-AGGREGATION completion.
+  Interrupt path (defensive, `--resume` only): in-flight N-IDEA-STRUCTURE
+  output discarded; UUIDs added to `pre_idea_id_map` during interrupted run
+  removed; tuple-form `(branch, idx)` references re-establish.
+
+### D2 — Thin Spread
+- **Trigger:** N-SPREADING `convergent_node_count` below mode threshold:
+  - MINIMAL: `= 0`
+  - STANDARD: `< 3`
+  - DEEP: `< 5`
+- **Action:**
+  1. **DEFIXATION back-edge:** re-fire N-SPREADING with N-DEFIXATION verbatim
+     prefix `"Set aside all previous solution attempts. They are invalid for
+     this pass. Begin from scratch."`
+  2. **RANDOM-ENTRY:** spawn additive N-AGGREGATION input.
+- **Spawn cost:** 2 slots (RANDOM-ENTRY + N-SPREADING re-fire).
+- **MINIMAL cap-overflow:** D2 always exceeds MINIMAL hard cap (3); degrade
+  RANDOM-ENTRY to inline; N-SPREADING re-fire takes the last slot. If even
+  that won't fit, skip the re-fire only.
+- **Per-cycle limit:** max 2 N-SPREADING replacements per cycle.
+
+### D3 — Score Stagnation
+- **Trigger:** `|score_n − score_{n-1}| ≤ 0.05` across 2 consecutive
+  refinement passes on the same idea_id, **within the same `reframe_seq`
+  group**.
+- **Refinement pass:** one re-execution of N-IDEA-STRUCTURE or N-PRUNE on a
+  specific idea after a feedback signal.
+- **Tracking:** `session.md.idea_refinement_history: { <idea_id>: [{score,
+  reframe_seq}, ...] }`. `reframe_seq` increments by 1 after each REFRAME.
+- **Action:** instantiate REFRAME (large tier). Output replaces stagnant
+  idea's content; idea_id (UUID) survives.
+- **Per-idea limit:** max 2 REFRAME instantiations per idea_id. On 3rd:
+  skip, log `[D3-REFRAME-LIMIT idea_id=<X>]`, add to
+  `session.md.open_questions_queue` for human review at gate.
+
+### D1 / D2 co-fire
+D1 takes priority. D2 actions deferred until D1's DOMAIN-TARGETED nodes and
+AGG re-fire complete. After D1 resolves, re-evaluate D2 against the
+freshly-refired N-AGGREGATION's `convergent_nodes`. Combined worst-case
+spawn cost still must fit hard cap via overflow policy.
+
+### Cap-pressure exception (FORWARD-CHAIN-BATCH)
+DEEP + `apu_count > 30` + any D-trigger fired this cycle: degrade
+N-FORWARD-CHAIN-BATCH to inline (frees 1 spawn slot). Preferred over D1 AGG
+re-fire abort. Log `[FORWARD-CHAIN-BATCH-DEGRADE-INLINE reason=cap-pressure-from-D-trigger apu_count=<N>]`.
+
+### `--resume` D-trigger policy
+For nodes whose ledger entry exists in `grs-ledger.md` (completed in original
+run): D1/D2/D3 NOT re-evaluated (`topology-trace.md` is canonical record).
+For nodes absent from ledger: D1/D2/D3 ARE re-evaluated post-completion on
+resume. Surface accepted gap as `[RESUME-D-TRIGGER-GAP nodes=<list>]` info
+at next gate.
 
 ## PAUSE / RESUME PROTOCOL
-(filled in Task 33)
+
+Two pause points share one mechanism:
+- Phase 5 clarify-loop pause (`AWAITING_CLARIFY`).
+- Phase 12 review-gate pause (`AWAITING_GATE`).
+
+### Pause sequence
+1. Emit prompt block (clarifying questions OR gate options) as plain chat text.
+2. Update `session.md.state` AND `session.md.pause_ts` (ISO8601 of pause entry)
+   on disk via `scripts/session-md-update.sh` (F009; atomic tmp+fsync+rename+bak).
+3. STOP emitting tool calls -- natural Claude Code pause.
+
+### Pause-time accounting (F016)
+On resume from `AWAITING_CLARIFY`: subtract `(now - pause_ts)` from
+`session.md.phase_actuals[5]` so the human pause does NOT count against the
+Phase 5 wall-clock budget. Same for `AWAITING_GATE` against Phase 12. Clear
+`session.md.pause_ts` after the subtraction. Soft/hard cap checks are then
+sound across resume boundaries.
+
+### Resume sequence
+On next user message OR `--resume <path>`:
+1. Read `session.md`; check `state`.
+2. Reconstruct in-memory state: load **full** `session.md` (all fields per S3),
+   `grs-ledger.md`, `topology-trace.md`, fragment files on demand.
+3. Parse user message according to `state`:
+   - `AWAITING_CLARIFY` -> message body = answers to N-CLARIFY-LOOP questions
+     (one per question, ordered or labeled `Q1/Q2/...`); or `[SKIP]` to proceed.
+   - `AWAITING_GATE` -> first **top-level** bracketed token = gate signal (the
+     "top-level" qualifier matters for nested payloads like
+     `[REJECT items: [APU-007, APU-009]]`).
+   - `AWAITING_REWORK_CONFIRM` -> first top-level bracketed token. If
+     `[CONFIRM-REWORK]`: execute rollback (flag ledger entries from named
+     phase onward as `[ROLLED-BACK]`, delete fragments, re-fire pipeline);
+     transition to `RUNNING`. Any other bracketed token (e.g. `[ABORT]`,
+     `[REJECT items: ...]`): rework cancelled -- state returns to
+     `AWAITING_GATE` and the same token is re-parsed under that state's
+     rules. Unparseable: emit `[GATE-PARSE-ERROR]`; state stays
+     `AWAITING_REWORK_CONFIRM`.
+   - `FINALIZED` (F107) -> emit one-line summary referencing
+     `~/docs/solution/<slug>/spec-final.md` plus `final_version`; do NOT
+     re-enter pipeline; exit cleanly with informational note
+     `[ALREADY-FINALIZED session_id=<id> spec=<path>]`.
+   - `ABORTED` (F107) -> emit one-line refusal pointing at
+     `session.md.abort_metadata`; exit cleanly with informational note
+     `[SESSION-ABORTED session_id=<id> phase_at_abort=<N>]`. No further
+     pipeline execution.
+4. Update `state` to `RUNNING` (or appropriate transition) and continue.
+
+### Phase 5 prompt block (verbatim template)
+
+```
+═══════════════════════════════════════════════════════════════
+CLARIFICATION NEEDED -- session <id>, phase 5
+
+The following items are ambiguous or need confirmation before brainstorming
+can proceed (per HG2 zero-info-loss):
+
+  Q1 (<APU refs>): "<question>"
+  Q2 (<APU refs>): "<question>"
+  ...
+
+Reply with answers (one per question, labeled Q1/Q2/... or in order).
+Or reply [SKIP] to proceed with current best-effort answers (each unanswered
+item logged in session.md.open_questions_queue).
+═══════════════════════════════════════════════════════════════
+```
+
+### `session.md.state` machine
+
+| State | Description | Transitions to |
+|---|---|---|
+| `RUNNING` | Pipeline executing | `AWAITING_CLARIFY` (Phase 5 pause), `AWAITING_GATE` (Phase 12 pause) |
+| `AWAITING_CLARIFY` | Paused inside Phase 5 | `RUNNING` on labeled answers or `[SKIP]` |
+| `AWAITING_GATE` | Paused at Phase 12 gate | `RUNNING` on `[REJECT]`/`[ADD]`/`[APPROVE WITH EDITS]`; `AWAITING_REWORK_CONFIRM` on `[REWORK]`; `FINALIZED` on clean `[APPROVE]`; `ABORTED` on `[ABORT]` |
+| `AWAITING_REWORK_CONFIRM` | Awaiting `[CONFIRM-REWORK]` | `RUNNING` on `[CONFIRM-REWORK]`; `AWAITING_GATE` on any other reply |
+| `FINALIZED` | `spec-final.md` written | Terminal |
+| `ABORTED` | `[ABORT]` accepted | Terminal. All session files retained. |
 
 ## PHASE 12 — REVIEW GATE + STATE MACHINE
-(filled in Task 33)
+
+### Phase 12 execution order (CANONICAL)
+Sequential sub-steps:
+1. **N-SPEC-AUDIT-MECHANICAL** (small tier; structural).
+2. **N-SPEC-AUDIT-SEMANTIC** (medium tier; intent-alignment; reads
+   `stages/N1-RESTATE.md`).
+2b. **V4 + V5** (fragment/trace-only -- runnable before spec file exists). Run via
+    `bash scripts/validate-spec-doc.sh --phase pre-grs-export --session-dir <path>`.
+3. **N-GRS-EXPORT** (no-llm; canonical first then user copy):
+    - Render Sections 1..16 from the S3 source map.
+    - Render Handoff Bundle as section 17 (7-artifact YAML).
+    - Apply `session.md.section_overrides` per routing.
+    - Write `stages/spec-v<V>-section-{01..17}.md`.
+    - Invoke `bash scripts/spec-chunk-write.sh --session-dir <path> --version <V>
+      --solution-dir <solution-path>`.
+3b. **V1a, V1b, V2, V3, V6, V7a, V7b, V8** (spec-file-dependent -- must run
+    AFTER step 3). Run via `bash scripts/validate-spec-doc.sh --phase
+    post-grs-export --session-dir <path> --spec <spec-v<V>.md>
+    --intent-threshold 0.7`. Aggregate results into
+    `session.md.verification_log`.
+4. **[HUMAN REVIEW GATE]** -- emit gate block (template below) including
+    audit outputs and any V-warnings. Set state `AWAITING_GATE`. Stop.
+
+### Gate block template
+
+```
+═══════════════════════════════════════════════════════════════
+SPEC HUMAN REVIEW GATE -- session <id>, version v<N>
+
+Spec written to ~/docs/solution/<DD-MM-slug>/spec-v<N>.md
+Completeness score: <X>/1.0 (threshold 0.8)
+Open questions: <K>  Conflicts: <M>  Score-stagnant items: <P>
+Decision warnings: <W>   (from N-SPEC-AUDIT-MECHANICAL.human_decision_warnings + post-signal orchestrator check)
+V-check warnings: <V>    (failed/deadlocked checks from session.md.verification_log;
+                          [V5-AUDIT-FAIL] is warning only;
+                          V1a/V1b/V2/V3/V6/V7a/V7b [VERIFICATION-DEADLOCK] block [APPROVE];
+                          V8 deadlock blocks finalize)
+
+To resume, reply with ONE of:
+  [APPROVE]                  — finalize as spec-final.md (auto-detects file edits *)
+  [APPROVE WITH EDITS]       — explicit confirmation that you edited the file
+  [REJECT items: <ids>]      — APU IDs (e.g., APU-007) or section refs (e.g., 4.2);
+                               routes through N-REFINE-QUERY → N-FALSIFY
+  [ADD: <text>]              — new APU; runs N-FALSIFY + N-FORWARD-CHAIN-BATCH +
+                               N-DEPENDENCY-MAP for that item only
+  [REWORK from phase <N>]    — major rethink; re-enters at named phase 0..12
+                               (must reply [CONFIRM-REWORK] after)
+  [ABORT]                    — discard session; no further versions
+
+* On any [APPROVE]: orchestrator atomically diffs spec-v<N>.md against canonical
+  N-GRS-EXPORT-v<N>.md. Non-empty diff → treat as [APPROVE WITH EDITS].
+
+Or edit spec-v<N>.md, save, then reply with one of the bracketed signals.
+═══════════════════════════════════════════════════════════════
+```
+
+### Signal-parsing rules
+- First **top-level** bracketed token wins.
+- `[REJECT items: <ids>]` -- comma/space-separated. Accepts `APU-NNN` or
+  section refs (e.g. `4.2`). Section refs resolved via APU-ID annotations in
+  `spec-v<N>.md`. **Resolution failure:** zero APU annotations -> emit
+  `[REJECT-RESOLUTION-FAIL section=<ref>]` and stay `AWAITING_GATE`.
+  **Section 14 special case:** `[REJECT items: 14.1]` = idea-level rejection
+  -> routes to N-PRUNE re-execution (NOT N-REFINE-QUERY/N-FALSIFY).
+- `[ADD: <text>]` -- text spans up to next bracketed token or EOM. Append to
+  `session.md.apus` as new APU; route through N-FALSIFY +
+  N-FORWARD-CHAIN-BATCH + N-DEPENDENCY-MAP for that item.
+- `[REWORK from phase <N>]` -- must name phase 0..12.
+  1. Emit confirmation prompt listing what will be discarded (GRS fragments
+     from phase N onward; prior `spec-v*.md` PRESERVED; ledger entries from
+     phase N onward flagged `[ROLLED-BACK cycle=<C>]` not deleted).
+  2. Set state `AWAITING_REWORK_CONFIRM`.
+  3. On `[CONFIRM-REWORK]`: append `## rework-marker [from-phase=N,
+     at-cycle=<C>]` to ledger; cycle counter CONTINUES from current value
+     (NOT reset); set state `RUNNING`; re-fire pipeline from phase N.
+  4. Any other reply: state returns to `AWAITING_GATE`.
+- `[ABORT]` -> write `session.md.abort_metadata: {timestamp, user_reason,
+  phase_at_abort}`; set state `ABORTED`; retain all session files.
+- Unparseable -> `[GATE-PARSE-ERROR - please reply with one of the bracketed
+  signals]`; state stays `AWAITING_GATE`.
+
+### Approval cycle
+1. Append `session.md.gate_history` with `{ts, signal, payload, cycle}`.
+2. Route per signal type.
+3. `[REJECT]` / `[ADD]` / `[APPROVE WITH EDITS]` increment cycle counter, emit
+   `spec-v(N+1).md`, re-emit gate.
+4. `[APPROVE]` on clean v(N): re-run V1a-V8 (defensive -- catches regressions
+   from `[APPROVE WITH EDITS]` mutations). All-pass -> write `spec-final.md`,
+   set `final_version: N`, state `FINALIZED`, emit summary, terminate.
+
+### Anti-conformity sub-rule
+Post-signal contradiction check (NOT N-SPEC-AUDIT -- that runs before gate).
+What is checked depends on signal type:
+- `[APPROVE WITH EDITS]` -> operates on the section-level diff between
+  user-edited spec-v<N>.md and canonical N-GRS-EXPORT-v<N>.md. **SKIPS
+  read-only sections** (Section 16, Section 0 title, Section 1 source-intent
+  + confidence-on-recommendation).
+- `[REJECT items: <ids>]` -> operates on signal text payload; checks whether
+  rejection conflicts with other APUs depending on the rejected item.
+- `[ADD: <text>]` -> operates on payload; checks for conflicts with existing APUs.
+Detected contradictions populate `human_decision_warnings`. User can override.
 
 ## EDIT-PROPAGATION ROUTING
-(filled in Task 34)
+
+On `[APPROVE WITH EDITS]` (or auto-detected edits via `[APPROVE]`): single
+atomic Read of `spec-v<N>.md`; compute **section-level diff** against
+`stages/N-GRS-EXPORT-v<N>.md`.
+
+### Diff strategy
+Split BOTH files on **all** H1 + H2 section headers:
+- `# <Spec Title>` -- H1 (treat title edits as Section 0).
+- Pre-section-1 region (between H1 and `## 1. Header`) -> virtual **Section 0**
+  (currently the pipeline blockquote `> Pipeline: ...`).
+- `## <N>. <title>` -- sections 1..16.
+- `## Handoff Bundle` -- section 17.
+
+Compare section bodies; changed/added/deleted sections become edit-instructions.
+Line-level diffs WITHIN a section = full section replacement.
+
+### Routing table
+
+| Section | Edit propagates to | Notes |
+|---|---|---|
+| 0 (Title + pipeline blockquote) | `session.md.section_overrides["0"]` for blockquote; **title edits -> REJECTED** with `[SECTION-0-TITLE-READONLY]` (title derives from `topic_slug`; user must REWORK) | mixed |
+| 1 Header | per-subfield: `version`/`scale`/`flags` -> direct fields; `title`/`date` -> `section_overrides["1"]`; **`source intent` -> REJECTED** with `[SECTION-1-HG2-VIOLATION subfield=source_intent]` (HG2 verbatim); `confidence on recommendation` -> re-derived (read-only, edits dropped with `[CONFIDENCE-DERIVED-READONLY]`) | per-subfield |
+| 2 Locked Vocabulary | `session.md.locked_vocabulary` | direct |
+| 3 Invariants | `section_overrides["3"]` | over `apus[type=invariant]` |
+| 4 Interfaces | `section_overrides["4"]` | over `apus[type=interface]` |
+| 5 Behavior | `section_overrides["5"]` | over N-SPEC-CONSTRUCT output |
+| 6 Implementation Hints | `section_overrides["6"]` | over hints |
+| 7 Constraints | `section_overrides["7"]` + APU back-annotations on `apus[type=constraint]` for substantive changes | dual |
+| 8 APUs | `session.md.apus` directly | direct |
+| 9 Assumptions | `section_overrides["9"]` | over `apus[type=assumption]` |
+| 10 Falsifiability | `section_overrides["10"]` | over N-FALSIFY |
+| 11 Risk | `section_overrides["11"]` | over N-ADVERSARIAL-REVIEW |
+| 12 Non-goals | `section_overrides["12"]` + `apus[i].non_goal` flag flips | non-goal flag is canonical |
+| 13 Open Questions | `session.md.open_questions_queue` | direct |
+| 14 Decision Log | `section_overrides["14"]` (chosen-idea / rejected-alt fields). Idea-level rejection (`[REJECT items: 14.1]`) re-runs N-PRUNE | does NOT mutate fragments |
+| 15 Dependency Summary | `section_overrides["15"]` | over N-DEPENDENCY-MAP |
+| 16 Provenance Map | **read-only** -- edits emit `[SECTION-READONLY-WARNING section=16]` and dropped | rejection |
+| Handoff Bundle | `session.md.handoff_bundle` | direct |
+
+`section_overrides` schema: `{ "<num_string>": { <subfield>: <value> } }`.
+Sticky within session; re-applied on V-check re-route regenerations.
 
 ## V-CHECK BATTERY + RE-ROUTE POLICY
-(filled in Task 34)
+
+All V-checks run via `scripts/validate-spec-doc.sh` and log to
+`session.md.verification_log`.
+
+### Re-route map
+- V1 -> Phase 11 N-SPEC-CONSTRUCT (regenerate sections -- both per-section
+  citation discipline AND orphan-APU detection are surfaced; F207 merger)
+- V2 -> Phase 11 N-SPEC-CONSTRUCT (vocab-lock pass)
+- V3 -> Phase 4 N-CONSTRAINT-INVENTORY
+- V4 -> Phase 6 with D2 forced
+- V5 -> **NO re-route** (audit-only); FAIL emits `[V5-AUDIT-FAIL details=...]` warning at gate; does not block sign-off.
+- V6 -> Phase 11 N-FALSIFY
+- V7a -> Phase 11 N-SPEC-CONSTRUCT
+- V7b -> Phase 11 N-SPEC-CONSTRUCT
+- V8 -> re-run `spec-chunk-write.sh` per step 5 (own recovery path)
+
+### Loop protection
+**Max 2 re-routes per check** in a single session. 3rd FAIL -> emit
+`[VERIFICATION-DEADLOCK check=Vn]`, log, pass to human gate with WARNING tag
+(no further re-route loop). V5 has no counter (never routes).
+
+### Confidence checkpoint policy
+- Phase confidence < 0.5 -> reflexive re-route (same phase re-executes; max 2
+  per phase before DEADLOCK).
+- Per-thought advance < 0.6 -> does NOT advance (M3 zero-fatigue).
+- Sign-off completeness >= 0.8 (`min(coverage_apus, coverage_falsifiability,
+  coverage_dependency_map, coverage_conflict_resolution)`).
+
+### V-check failure after [APPROVE]
+- V8: re-run from last completed section in `write_progress`. If V8 passes on
+  retry: write `spec-final.md` and finalize. If V8 fails again: do NOT write
+  `spec-final.md`; emit `[APPROVAL-BLOCKED - V8 integrity failure after retry]`;
+  return state to `AWAITING_GATE` with `[VERIFICATION-DEADLOCK check=V8]`.
+- Other checks: standard re-route policy (max 2). On deadlock: do NOT write
+  `spec-final.md`; emit gate with deadlock tag; user must resolve.
 
 ## ANNOUNCE STRINGS
-(filled in Task 34)
+
+Emit as the FIRST chat output on session start.
+
+| Mode | First line |
+|---|---|
+| `--standard` (default) | `Using epiphany-spec to brainstorm and write a specification.` |
+| `--minimal` | `Using epiphany-spec (minimal mode) to brainstorm and write a specification.` |
+| `--deep` | `Using epiphany-spec (deep mode) to brainstorm and write a specification.` |
+| `--quiet` (any scale) | `Using epiphany-spec (quiet mode)...` |
+| `--resume <path>` | `Resuming epiphany-spec session <id> at phase <P>, version v<N>.` |
+
+Second line (always): `Excavate -> Distill -> Crystallize`.
+
+Phase progress (only with `--verbose`): one-line annotation per node start /
+complete; phase boundaries surface as `[Phase N -- <Cluster>]` headers.
+Suppressed when `--quiet` is also present.
+
+**Other flags do not modify the announce string.** `--xml`, `--deep`,
+`--minimal`, `--improve` (reserved), `--resume`, and all numeric/model
+overrides produce no additional announce text beyond the mode line above.
