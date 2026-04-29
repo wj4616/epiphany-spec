@@ -1,0 +1,40 @@
+{
+  "tiers": {
+    "large": [
+      "constraint-enumerator",
+      "lateral-creative",
+      "spreading-activation",
+      "simulator",
+      "janusian-adversary",
+      "aggregator",
+      "reframer"
+    ],
+    "medium": [
+      "paraphraser",
+      "decomposer",
+      "intent-layerer",
+      "clarifier",
+      "random-injector",
+      "domain-surveyor",
+      "falsifier",
+      "query-refiner",
+      "intake",
+      "semantic-auditor",
+      "adversarial-reviewer",
+      "pruner",
+      "idea-structurer"
+    ],
+    "small": [
+      "scorer",
+      "dep-mapper",
+      "mechanical-auditor"
+    ],
+    "no-llm": []
+  },
+  "default_models": {
+    "large":  "claude-opus-4-7",
+    "medium": "claude-sonnet-4-6",
+    "small":  "claude-haiku-4-5-20251001",
+    "no-llm": null
+  }
+}
