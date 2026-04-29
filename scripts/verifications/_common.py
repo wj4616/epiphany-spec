@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""Shared parsing helpers for V-check scripts."""
+"""Shared utilities for verification scripts."""
 from __future__ import annotations
 
 import re
@@ -7,17 +6,27 @@ from pathlib import Path
 
 import yaml
 
+# --- Regex patterns ---
+CITATION_STRICT = re.compile(r"\[APU-\d{3,}\]")
+CITATION_BROAD = re.compile(r"\bAPU-\d{3,}\b")
 HEADER = re.compile(r"^##\s+(\d{1,2})\.\s+", re.MULTILINE)
 NEXT_SEC = re.compile(r"^##\s+\d{1,2}\.\s+", re.MULTILINE)
-CITATION_STRICT = re.compile(r"\[APU-\d{3,}\]")
-CITATION_BROAD  = re.compile(r"\bAPU-\d{3,}\b")
-CONSTRAINT_HEADER = re.compile(r"^###\s+(C-\d+)\s+\[([^\]]+)\]", re.MULTILINE)
-SEC_7 = re.compile(r"^##\s+7\.\s+Constraints", re.MULTILINE)
-R_HEADER = re.compile(r"^###\s+(R-\d+)\b", re.MULTILINE)
 SEC_10 = re.compile(r"^##\s+10\.\s+Falsifiability", re.MULTILINE)
-WORD = re.compile(r"\b\w+\b")
+R_HEADER = re.compile(r"^###\s+(R-\d+)\b", re.MULTILINE)
+CONSTRAINT_HEADER = re.compile(
+    r"^###\s+(C-\d+)\s+\[([^\]]+)\]", re.MULTILINE
+)
+SEC_7_RE = re.compile(r"^##\s+7\.\s+Constraints", re.MULTILINE)
 
 
+# --- APU loading ---
+def load_apus(session_md_path: Path) -> list[str]:
+    data = yaml.safe_load(session_md_path.read_text()) or {}
+    apus = data.get("apus") or []
+    return [a["id"] if isinstance(a, dict) else str(a) for a in apus]
+
+
+# --- Section splitting ---
 def split_sections(spec_text: str) -> dict[int, str]:
     out: dict[int, str] = {}
     matches = list(HEADER.finditer(spec_text))
@@ -31,31 +40,28 @@ def split_sections(spec_text: str) -> dict[int, str]:
     return out
 
 
-def load_apus(session_md_path: Path) -> list[str]:
-    data = yaml.safe_load(Path(session_md_path).read_text()) or {}
-    return [a["id"] if isinstance(a, dict) else str(a) for a in (data.get("apus") or [])]
-
-
-def word_count(path: Path) -> int:
-    if not path.exists():
-        return 0
-    return len(WORD.findall(path.read_text()))
-
-
+# --- Constraint parsing ---
 def parse_constraints(spec_text: str) -> list[dict]:
-    m7 = SEC_7.search(spec_text)
+    m7 = SEC_7_RE.search(spec_text)
     if not m7:
         return []
-    nxt = NEXT_SEC.search(spec_text, pos=m7.end())
-    end = nxt.start() if nxt else len(spec_text)
+    next_sec = NEXT_SEC.search(spec_text, pos=m7.end())
+    end = next_sec.start() if next_sec else len(spec_text)
     body = spec_text[m7.end():end]
     out: list[dict] = []
     for m in CONSTRAINT_HEADER.finditer(body):
         cid, tags = m.group(1), m.group(2)
-        attrs = {}
-        for part in [p.strip() for p in tags.split(",")]:
-            if ":" in part:
-                k, v = part.split(":", 1)
-                attrs[k.strip()] = v.strip()
-        out.append({"id": cid, "tags": attrs})
+        attrs = dict(
+            p.split(":", 1) for p in [t.strip() for t in tags.split(",")] if ":" in p
+        )
+        out.append(
+            {"id": cid, "tags": {k.strip(): v.strip() for k, v in attrs.items()}}
+        )
     return out
+
+
+# --- Word count ---
+def word_count(path: Path) -> int:
+    if not path.exists():
+        return 0
+    return len(re.findall(r"\b\w+\b", path.read_text()))

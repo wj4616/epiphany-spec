@@ -26,8 +26,9 @@ FAIL_COUNT=0
 
 run_check() {
   local name="$1"; local script="$2"; shift 2
+  local module="scripts.verifications.${script%.py}"
   local out rc
-  if out=$(python3 "$REPO/scripts/verifications/$script" "$@" 2>&1); then
+  if out=$(PYTHONPATH="$REPO" python3 -m "$module" "$@" 2>&1); then
     echo "$name: pass"
   else
     rc=$?
@@ -52,10 +53,6 @@ case "$PHASE" in
     run_check "V7a" v7a_structural.py                --spec "$SPEC" --session-md "$SM"
     run_check "V7b" v7b_intent_alignment.py          --spec "$SPEC" --session-md "$SM" --threshold "$INTENT_THRESHOLD"
     run_check "V8"  v8_file_save.py                  --spec "$SPEC" --session-md "$SM"
-
-    echo ""
-    echo "completeness:"
-    PYTHONPATH="$REPO" python3 "$REPO/scripts/compute_completeness.py" --spec "$SPEC" --session-md "$SM" | sed 's/^/    /'
     ;;
   *)
     echo "unknown phase: $PHASE (use pre-grs-export or post-grs-export)" >&2
