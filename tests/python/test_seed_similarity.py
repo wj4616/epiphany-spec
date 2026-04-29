@@ -69,5 +69,30 @@ def test_jaccard_partial_overlap():
     assert jaccard({"a", "b"}, {"b", "c"}) == 1 / 3
 
 
+def test_slugify_handles_spanish_accents():
+    out = slugify("Diseñar una cosa interesante")
+    assert "diseñar" in out or "disenar" in out
+    assert "interesante" in out
+    assert "-" in out
+
+
+def test_slugify_handles_fullwidth_characters():
+    out = slugify("ＡＢＣ design")
+    assert out
+    assert out == out.lower()
+
+
+def test_slugify_handles_combining_marks():
+    composed = slugify("café-matcha")
+    decomposed = slugify("café-matcha")  # explicit combining acute
+    assert composed == decomposed
+
+
+def test_slugify_handles_mixed_script():
+    out = slugify("design 設計 spec")
+    assert "design" in out
+    assert "spec" in out
+
+
 def test_jaccard_empty_inputs_zero():
     assert jaccard(set(), set()) == 0.0

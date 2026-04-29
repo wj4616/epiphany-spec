@@ -82,7 +82,7 @@ def run(spec_path: Path, session_md_path: Path) -> dict:
     next_sec_after_5 = NEXT_SEC.search(text, pos=m.end())
     text_after_section_5 = text[next_sec_after_5.start():] if next_sec_after_5 else ""
 
-    block_bodies: list[str] = ["\n".join(b[1:]) for b in blocks]
+    block_bodies: list[str] = ["\n".join(b) for b in blocks]
 
     dead_end: list[str] = []
     for idx, oname in outputs:

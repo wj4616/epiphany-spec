@@ -48,7 +48,9 @@ def _strip_xml(s: str) -> str:
 
 
 def _normalize(s: str) -> str:
-    return unicodedata.normalize("NFC", s).lower()
+    nfc = unicodedata.normalize("NFC", s).lower()
+    nfkd = unicodedata.normalize("NFKD", nfc)
+    return "".join(c for c in nfkd if not unicodedata.combining(c))
 
 
 def _hyphenate(tokens: list[str]) -> str:
