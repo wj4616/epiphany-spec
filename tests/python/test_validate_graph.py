@@ -116,3 +116,64 @@ def test_graph_back_edges_declared():
     assert "REJECT-items" in labels  # 12→11 N-REFINE-QUERY
     assert "CLARIFY-LOOP" in labels  # Phase 5 pause-resume (logical, not graph self-loop)
     assert "REWORK" in labels  # 12 → phase N
+
+
+import subprocess
+import pytest as _pytest
+
+SCRIPT = REPO / "scripts" / "validate-graph.py"
+
+
+@_pytest.mark.xfail(reason="PRC1.4 script presence: remaining scripts arrive in Tasks 6-13")
+def test_validate_graph_runs_clean_on_static_config(tmp_path):
+    # No --session-dir → skip check 5
+    result = subprocess.run(
+        ["python3", str(SCRIPT), "--skip-modules"],
+        capture_output=True, text=True, cwd=str(REPO),
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@_pytest.mark.xfail(reason="PRC1.4 script presence: remaining scripts arrive in Tasks 6-13")
+def test_validate_graph_session_check_pass(tmp_path):
+    sd = tmp_path / "abc-uuid"
+    (sd / "stages").mkdir(parents=True)
+    (sd / "input.md").write_text("hello\n")
+    (sd / "session.md").write_text("session_id: abc-uuid\nstate: RUNNING\ntopic_slug: hello\n")
+    (sd / "grs-ledger.md").touch()
+    (sd / "topology-trace.md").touch()
+    solution_target = tmp_path / "solution-target"
+    solution_target.mkdir()
+    (sd / "spec-export").symlink_to(solution_target)
+    result = subprocess.run(
+        ["python3", str(SCRIPT), "--skip-modules",
+         "--session-dir", str(sd),
+         "--allowed-solution-root", str(tmp_path)],
+        capture_output=True, text=True, cwd=str(REPO),
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_validate_graph_fails_on_missing_module(tmp_path):
+    # Run WITHOUT --skip-modules: modules/ is empty → must fail check #1.
+    result = subprocess.run(
+        ["python3", str(SCRIPT)],
+        capture_output=True, text=True, cwd=str(REPO),
+    )
+    assert result.returncode != 0
+    assert "module" in (result.stdout + result.stderr).lower()
+
+
+def test_validate_graph_session_check_fail_dirty_dir(tmp_path):
+    sd = tmp_path / "dirty-uuid"
+    (sd / "stages").mkdir(parents=True)
+    (sd / "input.md").write_text("x\n")
+    (sd / "session.md").write_text("session_id: dirty-uuid\nstate: RUNNING\n")
+    (sd / "grs-ledger.md").write_text("## ledger-entry: pre-existing\n")  # dirty!
+    (sd / "topology-trace.md").touch()
+    result = subprocess.run(
+        ["python3", str(SCRIPT), "--skip-modules", "--session-dir", str(sd)],
+        capture_output=True, text=True, cwd=str(REPO),
+    )
+    assert result.returncode != 0
+    assert "session" in (result.stdout + result.stderr).lower()
