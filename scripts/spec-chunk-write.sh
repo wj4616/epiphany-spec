@@ -1,30 +1,56 @@
 #!/usr/bin/env bash
-# spec-chunk-write.sh -- concatenate 17 section partials into spec-v<N>.md.
-# STUB -- full implementation in Task 10.
+# spec-chunk-write.sh — concatenate 17 spec sections + final-line marker (§11).
 set -euo pipefail
 
-SESSION_DIR=""
-VERSION="1"
-SOLUTION_DIR=""
+SD=""; VERSION=""; SOLUTION_DIR=""; XML_WRAP=0; SESSION_ID=""; SCALE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --session-dir)  SESSION_DIR="$2";  shift 2 ;;
-    --version)      VERSION="$2";      shift 2 ;;
-    --solution-dir) SOLUTION_DIR="$2"; shift 2 ;;
-    *) echo "spec-chunk-write.sh: unknown flag: $1" >&2; exit 1 ;;
+    --session-dir)  SD="$2"; shift 2;;
+    --version)      VERSION="$2"; shift 2;;
+    --solution-dir) SOLUTION_DIR="$2"; shift 2;;
+    --xml)          XML_WRAP=1; shift;;
+    --session-id)   SESSION_ID="$2"; shift 2;;   # required when --xml
+    --scale)        SCALE="$2"; shift 2;;        # required when --xml
+    *) echo "unknown arg: $1" >&2; exit 2;;
   esac
 done
 
-STAGES="$SESSION_DIR/stages"
-SPEC_FILE="$SOLUTION_DIR/spec-v${VERSION}.md"
+[ -d "$SD" ]           || { echo "session dir missing" >&2; exit 2; }
+[ -n "$VERSION" ]      || { echo "missing --version" >&2; exit 2; }
+[ -d "$SOLUTION_DIR" ] || { echo "solution dir missing" >&2; exit 2; }
+if [ "$XML_WRAP" -eq 1 ]; then
+  [ -n "$SESSION_ID" ] || { echo "--xml requires --session-id" >&2; exit 2; }
+  [ -n "$SCALE" ]      || { echo "--xml requires --scale" >&2; exit 2; }
+fi
 
-# Concatenate all v<V>-section-*.md files in numeric order.
-{
-  for secfile in "$STAGES"/spec-v${VERSION}-section-*.md; do
-    [[ -f "$secfile" ]] && cat "$secfile" && echo ""
-  done
-  echo "_epiphany-spec-end-marker_"
-} > "$SPEC_FILE"
+CANONICAL="$SD/stages/N-GRS-EXPORT-v${VERSION}.md"
+USER_FILE="$SOLUTION_DIR/spec-v${VERSION}.md"
 
-echo "spec-v${VERSION}.md written to $SPEC_FILE"
+# Verify all 17 partials exist.
+for i in $(seq -w 01 17); do
+  P="$SD/stages/spec-v${VERSION}-section-${i}.md"
+  [ -f "$P" ] || { echo "missing partial: $P" >&2; exit 3; }
+done
+
+# Concatenate.
+TMP_OUT=$(mktemp)
+if [ "$XML_WRAP" -eq 1 ]; then
+  echo "<spec source=\"epiphany-spec\" session_id=\"$SESSION_ID\" version=\"$VERSION\" scale=\"$SCALE\">" >> "$TMP_OUT"
+fi
+for i in $(seq -w 01 17); do
+  cat "$SD/stages/spec-v${VERSION}-section-${i}.md" >> "$TMP_OUT"
+  echo "" >> "$TMP_OUT"
+done
+echo "<!-- end:spec-v${VERSION} -->" >> "$TMP_OUT"
+if [ "$XML_WRAP" -eq 1 ]; then
+  echo "</spec>" >> "$TMP_OUT"
+fi
+
+# Atomic copy to canonical, then user-editable.
+cp "$TMP_OUT" "$CANONICAL"
+cp "$TMP_OUT" "$USER_FILE"
+rm "$TMP_OUT"
+
+echo "wrote $CANONICAL"
+echo "wrote $USER_FILE"
