@@ -3,23 +3,15 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+from scripts._yaml_io import atomic_write_json
+
 INDEX_FILENAME = "cross_run_index.json"
 FINALIZED_STATE = "FINALIZED"
-
-
-def _atomic_write_json(path: Path, data: dict[str, Any]) -> None:
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    with open(tmp, "w") as f:
-        json.dump(data, f, indent=2, sort_keys=True)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, path)
 
 
 def _safe_load_session_md(p: Path) -> dict | None:
@@ -51,7 +43,7 @@ def rebuild_from_scratch(base_dir: Path) -> dict[str, dict]:
             "finalized_ts": data.get("finalized_ts", ""),
             "file_path": str(sm),
         }
-    _atomic_write_json(base_dir / INDEX_FILENAME, idx)
+    atomic_write_json(base_dir / INDEX_FILENAME, idx)
     return idx
 
 
@@ -72,7 +64,7 @@ def update(base_dir: Path, session_id: str, entry: dict) -> None:
     base_dir = Path(base_dir)
     idx = load_or_rebuild(base_dir)
     idx[session_id] = entry
-    _atomic_write_json(base_dir / INDEX_FILENAME, idx)
+    atomic_write_json(base_dir / INDEX_FILENAME, idx)
 
 
 def main() -> int:

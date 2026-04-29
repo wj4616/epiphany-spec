@@ -2,24 +2,12 @@
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
 import yaml
 
-
-def _atomic_write(path: Path, text: str) -> None:
-    tmp_dir = path.parent / "stages"
-    tmp_dir.mkdir(parents=True, exist_ok=True)
-    tmp = tmp_dir / "session.md.tmp"
-    with open(tmp, "w") as f:
-        f.write(text)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, path)
-    bak = tmp_dir / "session.md.bak"
-    bak.write_text(path.read_text())
+from scripts._yaml_io import atomic_write_yaml
 
 
 def main() -> int:
@@ -45,7 +33,7 @@ def main() -> int:
     if args.increment:
         data[args.increment] = data.get(args.increment, 0) + 1
 
-    _atomic_write(sm, yaml.safe_dump(data, default_flow_style=False, sort_keys=False))
+    atomic_write_yaml(sm, data, bak=True, bak_dir=args.session_dir / "stages")
     return 0
 
 
