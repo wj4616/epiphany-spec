@@ -67,3 +67,34 @@ def test_load_corrupted_index_triggers_rebuild(tmp_path):
     (base / "cross_run_index.json").write_text("{ broken json")
     idx = load_or_rebuild(base)
     assert "sess-A" in idx
+
+
+import multiprocessing
+
+
+def _writer(base_str, sid, payload):
+    from pathlib import Path
+    from scripts.cross_run_index import update
+    update(Path(base_str), sid, payload)
+
+
+def test_concurrent_updates_no_partial_json(tmp_path):
+    base = tmp_path
+    _make_session(base, "sess-A", state="FINALIZED", slug="a", conv_count=1)
+    payload_a = {"topic_slug": "a", "convergent_nodes_count": 1,
+                 "finalized_ts": "2026-04-29T00:00:00Z",
+                 "file_path": str(base / "sess-A" / "session.md")}
+    payload_b = {"topic_slug": "b", "convergent_nodes_count": 99,
+                 "finalized_ts": "2026-04-29T00:00:01Z",
+                 "file_path": str(base / "sess-A" / "session.md")}
+
+    procs = [
+        multiprocessing.Process(target=_writer, args=(str(base), "sess-A", payload_a)),
+        multiprocessing.Process(target=_writer, args=(str(base), "sess-A", payload_b)),
+    ]
+    for p in procs: p.start()
+    for p in procs: p.join(timeout=10)
+
+    with open(base / "cross_run_index.json") as f:
+        idx = json.load(f)
+    assert idx["sess-A"]["convergent_nodes_count"] in (1, 99)

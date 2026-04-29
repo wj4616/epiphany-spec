@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "epiphany-spec session.md",
+  "type": "object",
+  "required": [
+    "session_id", "state", "scale", "topic_slug",
+    "active_branches", "spawn_count", "current_version"
+  ],
+  "properties": {
+    "session_id": {"type": "string"},
+    "state": {"type": "string", "enum": [
+      "RUNNING", "AWAITING_CLARIFY", "AWAITING_GATE",
+      "AWAITING_REWORK_CONFIRM", "FINALIZED", "ABORTED"
+    ]},
+    "scale": {"type": "string", "enum": ["MINIMAL", "STANDARD", "DEEP"]},
+    "flags": {"type": "string"},
+    "topic_slug": {"type": "string"},
+    "input_kind": {"type": "string", "enum": ["", "raw", "enhanced"]},
+    "active_branches": {"type": "array", "items": {"type": "string", "enum": [
+      "LATERAL", "SPREADING", "SIMULATION", "ADVERSARIAL"
+    ]}},
+    "spawn_count": {"type": "integer", "minimum": 0},
+    "current_version": {"type": "integer", "minimum": 0},
+    "final_version": {"type": ["integer", "null"]},
+    "conflict_ledger": {"type": "array"},
+    "gate_history": {"type": "array"},
+    "open_questions_queue": {"type": "array"},
+    "idea_refinement_history": {"type": "object"},
+    "cross_run_seed": {"type": "object"},
+    "write_progress": {"type": "object"},
+    "verification_log": {"type": "array"},
+    "handoff_bundle": {"type": "object"},
+    "locked_vocabulary": {"type": "array"},
+    "apus": {"type": "array"},
+    "pre_idea_id_map": {"type": "object"},
+    "convergent_nodes": {"type": "array"},
+    "phase_budgets": {"type": "object"},
+    "phase_actuals": {"type": "object"},
+    "section_overrides": {"type": "object"},
+    "abort_metadata": {"type": ["object", "null"]},
+    "pause_ts": {"type": ["string", "null"]},
+    "created_ts": {"type": "string"},
+    "solution_dir": {"type": "string"}
+  },
+  "additionalProperties": true
+}

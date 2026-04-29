@@ -137,7 +137,7 @@ def test_validate_graph_session_check_pass(tmp_path):
     sd = tmp_path / "abc-uuid"
     (sd / "stages").mkdir(parents=True)
     (sd / "input.md").write_text("hello\n")
-    (sd / "session.md").write_text("session_id: abc-uuid\nstate: RUNNING\ntopic_slug: hello\n")
+    (sd / "session.md").write_text("session_id: abc-uuid\nstate: RUNNING\ntopic_slug: hello\nscale: STANDARD\nactive_branches: [SPREADING, LATERAL]\nspawn_count: 0\ncurrent_version: 0\n")
     (sd / "grs-ledger.md").touch()
     (sd / "topology-trace.md").touch()
     solution_target = tmp_path / "solution-target"

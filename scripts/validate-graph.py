@@ -155,6 +155,25 @@ def check_session_isolation(session_dir: Path,
                         f"PRC1.5: spec-export resolves outside allowed roots "
                         f"({target}; allowed={[str(r) for r in roots]})"
                     )
+    # I005 — session.md schema validation (best-effort; skip if jsonschema absent).
+    sm_path = session_dir / "session.md"
+    if sm_path.exists():
+        try:
+            import jsonschema  # type: ignore
+            import yaml as _yaml
+            import json as _json
+            schema = _json.loads((REPO / "schemas" / "session-md-v1.schema.json").read_text())
+            data = _yaml.safe_load(sm_path.read_text()) or {}
+            try:
+                jsonschema.validate(data, schema)
+            except jsonschema.ValidationError as e:
+                errors.append(
+                    f"PRC1.5: session.md schema violation: {e.message} "
+                    f"(at {list(e.path)})"
+                )
+        except ImportError:
+            pass  # schema check is optional; continue without
+
     return errors
 
 
