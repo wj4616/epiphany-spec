@@ -226,10 +226,88 @@ clean post-init content (check 5).
 PRC1, before Phase 1. Driven by `scripts/cross_run_index.py` + `scripts/seed_similarity.py`.
 
 ## PHASE CHAIN — READY-SET DISPATCH
-(filled in Task 31)
+
+Read `graph.json`. Maintain a **runtime active-topology overlay** in memory; the
+on-disk graph.json is NEVER mutated. Edges from `branch_label` not in
+`session.md.active_branches` are masked.
+
+### Ready-set loop
+
+A node is **ready** iff ALL of (F112):
+- all forward-edge predecessors have completed (written their fragment + appended a ledger entry);
+- the node's `scale_gates` (if present in graph.json) includes `session.md.scale`;
+- the node's `branch_label` (if present) is in `session.md.active_branches`.
+
+A node is **skipped** (not dispatched, not blocking) when its `scale_gates` or
+`branch_label` excludes the current run. Skipped nodes do not count against
+the spawn budget and their forward edges propagate via the ready-set as if
+they had completed (they were never going to fire this run).
+
+The orchestrator picks ready nodes in graph-declared order:
+
+1. Resolve next ready node `N`.
+2. Look up tier via `hats.json[N.hat]`.
+3. Compose `{{ledger_at_dispatch}}` = digest of `grs-ledger.md` (last 8 entries
+   or full content if shorter).
+4. Dispatch:
+   - **inline (LLM)**: read `modules/<N>.md`, role-switch to that module's
+     prompt template (substitute `{{ledger_at_dispatch}}`), produce output
+     conforming to `required_output_sections`.
+   - **inline (no-llm)**: execute the module's "Algorithm" section as pure
+     orchestrator logic. NO LLM call.
+   - **spawn**: call `Agent(subagent_type=general-purpose, ...)` with the
+     module's prompt template + ledger digest as the prompt body. Required
+     output sections must be returned as a YAML block.
+5. Write fragment to `stages/N<P>-<NodeName>[-<seq>].md` per S3 fragment naming.
+6. Run **N-SCORE** (mixed tier -- see modules/N-SCORE.md): LLM-judged for
+   creative-divergence nodes, deterministic for templating/transformation.
+7. Append ledger entry: `bash scripts/ledger-append.sh --session-dir ... --node-id <N>
+   --phase <P> --cycle <C> --fragment <path> --hat <hat> --tier <tier>
+   --exec-type <type> --score <s> --signals '<json>' --provenance-tags '<list>'
+   --headline '<text>'`.
+8. **Phase confidence check:** if `score < --confidence-threshold` (0.5 default),
+   re-execute the same phase (max 2 reflexive re-routes per phase before
+   `[VERIFICATION-DEADLOCK]`).
+9. Run **N-REWRITE-EVALUATOR** (no-llm cross-cutting). If D1/D2/D3 fires:
+   handle per S32 (Dynamic Rewrite section).
+10. Loop to step 1 with updated ready set.
+
+### Spawn budget tracking
+Maintain `session.md.spawn_count` (initialized to 0 by `session-init.sh`,
+F014). On every `Agent` dispatch: `session.md.spawn_count += 1` via
+`scripts/session-md-update.sh` (atomic -- see F009 fix). Compare to mode soft
++ hard caps from graph.json mode table. On near-overflow
+(`spawn_count + planned_spawns >= soft_cap`): emit `[SPAWN-NEAR-CAP soft=<S>
+actual=<A>]` informational. On hard cap: trigger cap-overflow policy
+(degrade-to-inline -> skip-and-flag).
+
+**Resume safety:** because `spawn_count` is on disk, `--resume` correctly
+continues from the original budget rather than starting fresh.
 
 ## PHASE 6 — AND-JOIN + ACTIVE BRANCHES
-(filled in Task 31)
+
+`session-init.sh` writes `session.md.active_branches` deterministically from
+the mode flag (single source of truth -- F010):
+- MINIMAL -> `[SPREADING]`
+- STANDARD -> `[SPREADING, LATERAL]`
+- DEEP -> `[SPREADING, LATERAL, SIMULATION, ADVERSARIAL]`
+
+The orchestrator MUST NOT recompute or override this field; it is read-only
+from the orchestrator's perspective except via `[REWORK]` rollback.
+
+When evaluating Phase 6 readiness for N-AGGREGATION, only branches in
+`active_branches` (plus any D-trigger additions: D1 DOMAIN-TARGETED, D2
+RANDOM-ENTRY) count. Inactive-branch edges are pre-masked and never block.
+
+**D2 AND-join coordination:** the re-fired N-SPREADING **replaces** the original
+slot in N-AGGREGATION's AND join (original output discarded). RANDOM-ENTRY is
+**additive** (new edge into N-AGGREGATION).
+
+**Per-cycle D2 re-fire limit:** max 2 N-SPREADING replacements per cycle. On
+3rd thin-spread detection: skip D2 actions, log `[D2-REPLACEMENT-LIMIT
+cycle=<C> convergent_node_count=<N>]` in `topology-trace.md`, proceed with
+the best available N-SPREADING output (highest `convergent_node_count` across
+attempts), surface as gate warning.
 
 ## DYNAMIC REWRITE (D1 / D2 / D3)
 (filled in Task 32)
