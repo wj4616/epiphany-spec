@@ -26,7 +26,7 @@ def run(spec_path: Path, session_md_path: Path, threshold: float = 0.7) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     import argparse
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(description="V7b — Intent alignment: checks spec content against intent-layer declarations.")
     p.add_argument("--spec",       required=True, type=Path)
     p.add_argument("--session-md", required=True, type=Path)
     p.add_argument("--threshold",  type=float, default=0.7)

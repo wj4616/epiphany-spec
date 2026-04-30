@@ -65,3 +65,24 @@ def word_count(path: Path) -> int:
     if not path.exists():
         return 0
     return len(re.findall(r"\b\w+\b", path.read_text()))
+
+
+def shared_main(run_fn, extra_args: list[dict] | None = None):
+    """Shared CLI entry point for verification scripts.
+
+    Handles argparse, calls run_fn, prints result dict, and returns exit code.
+    extra_args: optional list of {name, type, required, default, help} dicts
+    for script-specific arguments (e.g. --threshold for v7b).
+    """
+    import argparse
+    p = argparse.ArgumentParser(description=run_fn.__doc__ or "")
+    p.add_argument("--spec", required=True, type=Path)
+    p.add_argument("--session-md", required=True, type=Path)
+    for ea in (extra_args or []):
+        kwargs = {k: v for k, v in ea.items() if k != "name"}
+        p.add_argument(f"--{ea['name']}", **kwargs)
+    args = p.parse_args()
+    extra_kwargs = {ea["name"]: getattr(args, ea["name"]) for ea in (extra_args or [])}
+    r = run_fn(args.spec, args.session_md, **extra_kwargs)
+    print(r)
+    return 0 if r["status"] == "pass" else 1

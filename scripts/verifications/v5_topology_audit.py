@@ -49,7 +49,7 @@ def run(spec_path: Path, session_md_path: Path) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     import argparse
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(description="V5 — Topology audit: structural validation of the 16-section spec document.")
     p.add_argument("--spec",       required=True, type=Path)
     p.add_argument("--session-md", required=True, type=Path)
     args = p.parse_args(argv)

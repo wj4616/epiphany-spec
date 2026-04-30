@@ -26,9 +26,7 @@ def predict(mode: str, apu_count: int) -> list[dict]:
         skipped_for_scale = scale_gates and mode not in scale_gates
         skipped_for_branch = False
         if branch_label:
-            label_to_branch = {"A": "LATERAL", "B": "SPREADING",
-                               "C": "SIMULATION", "D": "ADVERSARIAL"}
-            skipped_for_branch = label_to_branch.get(branch_label) not in active
+            skipped_for_branch = g.get("branch_labels", {}).get(branch_label) not in active
 
         exec_type = n["exec_type"]
         if nid == "N-FORWARD-CHAIN-BATCH":

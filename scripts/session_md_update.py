@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Atomic mutator for session.md. Invoked by session_md_update.py."""
+"""Atomic mutator for session.md fields. Invoked by the epiphany-spec orchestrator via Bash."""
 from __future__ import annotations
 
 import argparse

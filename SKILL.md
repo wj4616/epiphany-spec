@@ -152,6 +152,7 @@ Inventory:
 | `halt-prc1-mcp-reference`       | PRC1.3 | module references `mcp__dify-*` |
 | `halt-prc1-script-presence`     | PRC1.4 | required script missing or non-executable |
 | `halt-prc1-session-isolation`   | PRC1.5 | dirty post-init contents |
+| `halt-unresolved-placeholder`   | Step 4 | `{{placeholder}}` not resolvable from session.md or gate context |
 | `halt-clarify-pause`            | Phase 5 | (informational pause, not error) |
 | `halt-gate-pause`               | Phase 12 | (informational pause, not error) |
 | `halt-already-finalized`        | resume on FINALIZED state (F107) | session done |
@@ -256,32 +257,43 @@ The orchestrator picks ready nodes in graph-declared order:
    `python3 scripts/ledger_digest.py --session-dir <SD> --max-entries 8 --max-bytes 8192`
    and substituting its stdout into the prompt template (F106 — deterministic;
    no orchestrator-side summarization).
-4. Dispatch:
-   - **inline (LLM)**: read `modules/<N>.md`, role-switch to that module's
-     prompt template (substitute `{{ledger_at_dispatch}}`), produce output
-     conforming to `required_output_sections`.
+4. Placeholder resolution (applies to inline-LLM and spawn dispatch):
+   After reading the module body, scan for ALL `{{placeholder}}` patterns
+   (regex `\{\{(\w+)\}\}`). Resolve each against:
+   - `session.md` top-level fields (e.g. `{{input_kind}}` → `session.md.input_kind`)
+   - Gate-signal context (e.g. `{{target_apu_id}}` from `[REJECT items: <id>]`,
+     `{{domain_class}}`/`{{rationale}}` from D1 coverage-gap dispatch,
+     `{{idea_id}}` from D3 stagnation dispatch)
+   - Ledger digest (substitute `{{ledger_at_dispatch}}` as step 3 output)
+   Any placeholder that remains unresolved after all sources are checked →
+   `halt-unresolved-placeholder` with the placeholder name and module node_id.
+   This MUST run for inline-LLM dispatch. Spawn dispatch delegates to
+   `build_prompt.py` which does its own resolution via `--extra` flags.
+
+5. Dispatch:
+   - **inline (LLM)**: role-switch to the fully-resolved module prompt
+     template, produce output conforming to `required_output_sections`.
    - **inline (no-llm)**: execute the module's "Algorithm" section as pure
      orchestrator logic. NO LLM call.
    - **spawn**: invoke `python3 scripts/build_prompt.py --module modules/<X>.md
-     --session-dir <SD>` to produce a fully-substituted prompt body
-     (F111 -- substitution is script-side; an orchestrator that omits this
-     step gets a `[DISPATCH-PLACEHOLDER-LEAK]` halt rather than a silent
-     placeholder reaching the subagent). Pass the script's stdout as the
+     --session-dir <SD> [--extra key=value ...]` to produce a fully-substituted
+     prompt body (F111 -- substitution is script-side; pass all context
+     key-values from step 4 via `--extra`). Pass the script's stdout as the
      prompt body to `Agent(subagent_type=general-purpose, ...)`. Required
      output sections must be returned as a YAML block.
-5. Write fragment to `stages/N<P>-<NodeName>[-<seq>].md` (fragment naming per GRS layout above; seq suffix only on re-fire passes).
-6. Run **N-SCORE** (mixed tier -- see modules/N-SCORE.md): LLM-judged for
+6. Write fragment to `stages/N<P>-<NodeName>[-<seq>].md` (fragment naming per GRS layout above; seq suffix only on re-fire passes).
+7. Run **N-SCORE** (mixed tier -- see modules/N-SCORE.md): LLM-judged for
    creative-divergence nodes, deterministic for templating/transformation.
-7. Append ledger entry: `python3 scripts/ledger_append.py --session-dir ... --node-id <N>
+8. Append ledger entry: `python3 scripts/ledger_append.py --session-dir ... --node-id <N>
    --phase <P> --cycle <C> --fragment <path> --hat <hat> --tier <tier>
    --exec-type <type> --score <s> --signals '<json>' --provenance-tags '<list>'
    --headline '<text>'`.
-8. **Phase confidence check:** if `score < --confidence-threshold` (0.5 default),
+9. **Phase confidence check:** if `score < --confidence-threshold` (0.5 default),
    re-execute the same phase (max 2 reflexive re-routes per phase before
    `[VERIFICATION-DEADLOCK]`).
-9. Run **N-REWRITE-EVALUATOR** (no-llm cross-cutting). If D1/D2/D3 fires:
+10. Run **N-REWRITE-EVALUATOR** (no-llm cross-cutting). If D1/D2/D3 fires:
    handle per Dynamic Rewrite section below.
-10. Loop to step 1 with updated ready set.
+11. Loop to step 1 with updated ready set.
 
 ### Spawn budget tracking
 Maintain `session.md.spawn_count` (initialized to 0 by `session-init.sh`,

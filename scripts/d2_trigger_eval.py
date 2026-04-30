@@ -28,7 +28,7 @@ def evaluate(convergent_node_count: int, mode: str, state: dict) -> dict:
 
 if __name__ == "__main__":
     import argparse
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(description="D2 trigger evaluator — checks N-SPREADING convergent node count against mode threshold.")
     p.add_argument("--count", type=int, required=True)
     p.add_argument("--mode",  default="STANDARD")
     p.add_argument("--cycle", type=int, default=1)

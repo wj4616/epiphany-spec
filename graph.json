@@ -362,7 +362,7 @@
     {
       "id": "N-REFINE-QUERY",
       "module_file": "modules/N-REFINE-QUERY.md",
-      "phase": 11,
+      "phase": "cross-cutting",
       "exec_type": "inline",
       "tier": "medium",
       "hat": "query-refiner",
