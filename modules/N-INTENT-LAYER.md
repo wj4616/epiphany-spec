@@ -26,6 +26,14 @@ For each APU in session.md.apus, decide whether it is in-scope or out-of-scope
 for this spec. Out-of-scope APUs get `non_goal: true` AND appear in non_goals
 with a reason. In-scope items pass through unchanged.
 
+### Required output format
+
+- **non_goals:** Array of `{apu_id, reason}` for out-of-scope APUs.
+- **in_scope:** Array of APU IDs that remain in scope for this spec
+  (complement of non_goals — every APU not in non_goals MUST appear here).
+- **back_annotated_apu_ids:** List of APU IDs whose `non_goal` flag you set
+  to `true`. The orchestrator uses this to update `session.md.apus` directly.
+
 ## ANNOTATIONS (optional)
 
 If you observe a correction, non-obvious insight, open question, or

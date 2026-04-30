@@ -36,20 +36,24 @@ def _strip_section_8(text: str) -> str:
 
 def run(spec_path: Path, session_md_path: Path) -> dict:
     text = Path(spec_path).read_text()
-    # (a) per-section citation discipline
-    sections = split_sections(text)
-    missing_sections: list[int] = []
-    for sec in range(1, 17):
-        if sec in EXEMPT_SECTIONS:
-            continue
-        body = sections.get(sec, "")
-        if not CITATION_STRICT.search(body):
-            missing_sections.append(sec)
+    declared = load_apus(Path(session_md_path))
+
+    # (a) per-section citation discipline — skip when zero APUs (vacuously ok)
+    if declared:
+        sections = split_sections(text)
+        missing_sections: list[int] = []
+        for sec in range(1, 17):
+            if sec in EXEMPT_SECTIONS:
+                continue
+            body = sections.get(sec, "")
+            if not CITATION_STRICT.search(body):
+                missing_sections.append(sec)
+    else:
+        missing_sections = []
 
     # (b) orphan APUs
     cite_corpus = _strip_section_8(text)
     cited = set(CITATION_BROAD.findall(cite_corpus))
-    declared = load_apus(Path(session_md_path))
     uncited = [a for a in declared if a not in cited]
 
     if missing_sections or uncited:

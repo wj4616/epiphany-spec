@@ -18,7 +18,10 @@ Current ledger digest:
 
 Run a pre-mortem on the chosen_idea from N-PRUNE. For each plausible failure,
 list mitigation AND any APU IDs the failure mode promotes to invariants
-(elevated_to_invariants). Then state what evidence would flip the decision.
+(elevated_to_invariants). State what evidence would flip the decision (what
+would change your mind). Then articulate the boring_baseline: the simplest
+non-AI, non-novel alternative that could plausibly solve the original problem
+— what would someone build if they were NOT trying to be clever.
 
 ## ANNOTATIONS (optional)
 

@@ -2,7 +2,7 @@
 """_yaml_io.py — atomic write helpers for YAML and JSON (I101).
 
 Single source of truth for the tmp+fsync+rename+bak discipline used by
-session-md-update.sh and cross_run_index.py.
+session_md_update.py and cross_run_index.py.
 """
 from __future__ import annotations
 

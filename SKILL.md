@@ -44,8 +44,9 @@ finalize on `[APPROVE]`.
 - **`scripts/*`:** session-init, ledger-append, spec-chunk-write,
   seed-similarity, cross_run_index, validate-graph, validate-spec-doc,
   verifications/v*.py.
-- **GRS** (per-session live state): `~/docs/epiphany/spec/<session_id>/`. See
-  S3 of the design brief.
+- **GRS** (per-session live state): `~/docs/epiphany/spec/<session_id>/`
+  containing `input.md`, `session.md`, `grs-ledger.md`, `topology-trace.md`,
+  and `stages/` directory for per-node fragment files.
 - **Spec output:** `~/docs/solution/<DD-MM-slug>/`.
 
 ## TRIGGERS
@@ -158,8 +159,8 @@ Inventory:
 | `halt-verification-deadlock`    | V-check 3rd re-route | `check=Vn` |
 | `halt-spawn-cap-exceeded`       | dispatch loop | hard cap reached after overflow policy |
 | `halt-d1-aggregation-refire-skipped` | D1 cap-overflow | AGG re-fire slot unavailable |
-| `halt-d2-replacement-limit`     | D2 3rd thin-spread | per-cycle re-fire cap |
-| `halt-d3-reframe-limit`         | D3 3rd stagnation | per-idea REFRAME cap |
+| `halt-d2-replacement-limit`     | D2 3rd thin-spread | per-cycle re-fire cap (**downgrade-and-continue:** skip, log, proceed with best output; surface as gate warning) |
+| `halt-d3-reframe-limit`         | D3 3rd stagnation | per-idea REFRAME cap (**downgrade-and-continue:** skip, log, add to open_questions_queue for human review at gate) |
 | `halt-rework-confirm-required`  | [REWORK] without [CONFIRM-REWORK] | (informational, not error) |
 | `halt-gate-parse-error`         | gate signal | unparseable bracketed token |
 | `halt-reject-resolution-fail`   | [REJECT items: <ref>] | section ref -> zero APUs |
@@ -168,9 +169,13 @@ Inventory:
 | `halt-time-budget-hardcap`      | per-phase budget | actual > 3x rounded budget |
 | `halt-session-md-unrecoverable` | session.md corruption recovery exhausted | `.bak` also unreadable (Pass-3 F205: v1.0 has only the .bak fallback; reconstruction-from-ledger deferred to v1.1) |
 
-**Logging discipline:** halts that are informational (clarify pause, gate
-pause, rework-confirm) emit the envelope but DO NOT raise errors --
-they're pause signals. All others terminate the pipeline.
+**Logging discipline — three halt categories:**
+
+| Category | Behavior | Halts |
+|---|---|---|
+| **Informational** (pause signals) | Emit envelope; DO NOT raise errors; wait for human input | `halt-clarify-pause`, `halt-gate-pause`, `halt-rework-confirm-required` |
+| **Downgrade-and-continue** | Emit envelope as structured warning; skip action; proceed with best-available | `halt-d2-replacement-limit`, `halt-d3-reframe-limit` |
+| **Terminating** (fatal errors) | Emit envelope; halt pipeline immediately | All other halt states |
 
 ## PRC1 — PRE-RUN CHECK
 
@@ -181,7 +186,7 @@ Run **before** any node fires. Failure on any check = HALT with diagnostic messa
 | 1 | Module completeness | Every node in active topology has `modules/N*.md`. |
 | 2 | Ledger placeholder | Every LLM-backed module's prompt template contains `{{ledger_at_dispatch}}`. **No-llm tier nodes are exempt** -- read `hats.json` tier to filter. |
 | 3 | No MCP references | No module's prompt template references `mcp__dify-*`. |
-| 4 | Script presence | All scripts listed in S3 of design brief exist and are executable. |
+| 4 | Script presence | All scripts listed in ARCHITECTURE section exist and are executable. |
 | 5 | Session isolation | Post-init directory contents match expected state. |
 
 Mechanized check: `python3 scripts/validate-graph.py [--session-dir <path>]`.
@@ -264,7 +269,7 @@ The orchestrator picks ready nodes in graph-declared order:
      placeholder reaching the subagent). Pass the script's stdout as the
      prompt body to `Agent(subagent_type=general-purpose, ...)`. Required
      output sections must be returned as a YAML block.
-5. Write fragment to `stages/N<P>-<NodeName>[-<seq>].md` per S3 fragment naming.
+5. Write fragment to `stages/N<P>-<NodeName>[-<seq>].md` (fragment naming per GRS layout above; seq suffix only on re-fire passes).
 6. Run **N-SCORE** (mixed tier -- see modules/N-SCORE.md): LLM-judged for
    creative-divergence nodes, deterministic for templating/transformation.
 7. Append ledger entry: `python3 scripts/ledger_append.py --session-dir ... --node-id <N>
@@ -275,17 +280,25 @@ The orchestrator picks ready nodes in graph-declared order:
    re-execute the same phase (max 2 reflexive re-routes per phase before
    `[VERIFICATION-DEADLOCK]`).
 9. Run **N-REWRITE-EVALUATOR** (no-llm cross-cutting). If D1/D2/D3 fires:
-   handle per S32 (Dynamic Rewrite section).
+   handle per Dynamic Rewrite section below.
 10. Loop to step 1 with updated ready set.
 
 ### Spawn budget tracking
 Maintain `session.md.spawn_count` (initialized to 0 by `session-init.sh`,
 F014). On every `Agent` dispatch: `session.md.spawn_count += 1` via
-`scripts/session_md_update.py` (atomic -- see F009 fix). Compare to mode soft
-+ hard caps from graph.json mode table. On near-overflow
+`scripts/session_md_update.py` (atomic -- see F009 fix). Compare to the mode
+spawn caps below. Soft cap = 80% of hard cap (rounded up). On near-overflow
 (`spawn_count + planned_spawns >= soft_cap`): emit `[SPAWN-NEAR-CAP soft=<S>
 actual=<A>]` informational. On hard cap: trigger cap-overflow policy
 (degrade-to-inline -> skip-and-flag).
+
+### Spawn caps (source of truth — this section)
+
+| Mode | Hard cap | Soft cap (80%) |
+|------|----------|--------------------|
+| MINIMAL | 3 | 3 |
+| STANDARD | 7 | 6 |
+| DEEP | 10 | 8 |
 
 **Resume safety:** because `spawn_count` is on disk, `--resume` correctly
 continues from the original budget rather than starting fresh.
@@ -304,6 +317,14 @@ from the orchestrator's perspective except via `[REWORK]` rollback.
 When evaluating Phase 6 readiness for N-AGGREGATION, only branches in
 `active_branches` (plus any D-trigger additions: D1 DOMAIN-TARGETED, D2
 RANDOM-ENTRY) count. Inactive-branch edges are pre-masked and never block.
+**Scale-gate masking:** a branch whose `scale_gates` does not include the
+current `session.md.scale` is also pre-masked — same as an inactive branch.
+The AND-join required-count dynamically equals the number of dispatched
+(not-masked) branches for the current run. At MINIMAL scale this is 1
+(SPREADING only); at STANDARD it is 2 (SPREADING + LATERAL); at DEEP it is
+4 (all four branches). The orchestrator MUST compute N-AGGREGATION's
+expected predecessor count from the in-memory active topology overlay, not
+from the on-disk `join` field or the static `graph.json` edge count.
 
 **D2 AND-join coordination:** the re-fired N-SPREADING **replaces** the original
 slot in N-AGGREGATION's AND join (original output discarded). RANDOM-ENTRY is
@@ -407,11 +428,13 @@ sound across resume boundaries.
 ### Resume sequence
 On next user message OR `--resume <path>`:
 1. Read `session.md`; check `state`.
-2. Reconstruct in-memory state: load **full** `session.md` (all fields per S3),
+2. Reconstruct in-memory state: load **full** `session.md` (all fields: state, scale, mode, active_branches, spawn_count, apus, phase_actuals, clarification_history, idea_refinement_history, verification_log, cycle, version, created_ts, open_questions_queue, section_overrides, flags),
    `grs-ledger.md`, `topology-trace.md`, fragment files on demand.
 3. Parse user message according to `state`:
    - `AWAITING_CLARIFY` -> message body = answers to N-CLARIFY-LOOP questions
-     (one per question, ordered or labeled `Q1/Q2/...`); or `[SKIP]` to proceed.
+     (one per question, ordered or labeled `Q1/Q2/...`); `[SKIP]` to proceed
+     without answering; or `[ABORT]` to abort the pipeline (set state ABORTED,
+     write `abort_metadata` with `phase_at_abort=5`, exit cleanly).
    - `AWAITING_GATE` -> first **top-level** bracketed token = gate signal (the
      "top-level" qualifier matters for nested payloads like
      `[REJECT items: [APU-007, APU-009]]`).
@@ -473,7 +496,25 @@ Sequential sub-steps:
 2b. **V4 + V5** (fragment/trace-only -- runnable before spec file exists). Run via
     `bash scripts/validate-spec-doc.sh --phase pre-grs-export --session-dir <path>`.
 3. **N-GRS-EXPORT** (no-llm; canonical first then user copy):
-    - Render Sections 1..16 from the S3 source map.
+    - Render Sections 1..16 from the spec section map:
+      | Sec | Content source |
+      |-----|----------------|
+      | 1   | session.md.flags.title or input first line |
+      | 2   | N-RESTATE locked vocabulary output |
+      | 3   | N-INTENT-LAYER invariants |
+      | 4   | N-DECOMPOSE-APU interface boundaries |
+      | 5   | N-SPEC-CONSTRUCT sections[5] (architectural overview) |
+      | 6   | N-INTENT-LAYER + N-CONSTRAINT-INVENTORY APUs |
+      | 7   | N-CONSTRAINT-INVENTORY + N-ADVERSARIAL constraints |
+      | 8   | session.md.apus full list |
+      | 9   | N-DEPENDENCY-MAP dependency graph |
+      | 10  | N-FALSIFY falsifiability tests |
+      | 11  | N-FORWARD-CHAIN-BATCH forward chain |
+      | 12  | N-INTENT-LAYER non-goals |
+      | 13  | Decision log (ledger-sourced) |
+      | 14  | N-PRUNE tradeoff matrix |
+      | 15  | N-AGGREGATION convergent nodes + contradictions |
+      | 16  | N-SPEC-AUDIT-MECHANICAL audit summary |
     - Render Handoff Bundle as section 17 (7-artifact YAML).
     - Apply `session.md.section_overrides` per routing.
     - Write `stages/spec-v<V>-section-{01..17}.md`.
@@ -619,7 +660,7 @@ All V-checks run via `scripts/validate-spec-doc.sh` and log to
   citation discipline AND orphan-APU detection are surfaced; F207 merger)
 - V2 -> Phase 11 N-SPEC-CONSTRUCT (vocab-lock pass)
 - V3 -> Phase 4 N-CONSTRAINT-INVENTORY
-- V4 -> Phase 6 with D2 forced
+- V4 -> Phase 6 with D2 forced. **D2 slot interaction:** if current-cycle N-SPREADING replacements have already exhausted the per-cycle D2 limit (2), force an override replacement anyway (log `[V4-D2-OVERRIDE cycle=<C> reason=verification-recovery]`). V4 recovery takes precedence over the per-cycle D2 limit because convergent nodes are structurally required for spec coherence.
 - V5 -> **NO re-route** (audit-only); FAIL emits `[V5-AUDIT-FAIL details=...]` warning at gate; does not block sign-off.
 - V6 -> Phase 11 N-FALSIFY
 - V7a -> Phase 11 N-SPEC-CONSTRUCT

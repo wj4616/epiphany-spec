@@ -25,11 +25,13 @@ Convergent nodes are flagged where >= 2 chains intersect.
 Current ledger digest:
 {{ledger_at_dispatch}}
 
-For each APU in session.md.apus, fire associated concept chains. Where >= 2
-chains intersect, emit a `convergent_nodes` entry with the intersecting concept,
-the branches that activated it, and the integer signal_strength (count of chains
-that arrived at this concept). signal_strength MUST be >= 2 for an entry to
-qualify as convergent.
+First, build an activation_map: for each APU in session.md.apus, list the
+concept chains it fired and their activation targets. Then identify convergent
+nodes: where >= 2 chains intersect, emit a `convergent_nodes` entry with the
+intersecting concept, the branches that activated it, and the integer
+signal_strength (count of chains that arrived at this concept). signal_strength
+MUST be >= 2 for an entry to qualify as convergent. Emit convergent_node_count
+as the integer count of entries in convergent_nodes.
 
 ## ANNOTATIONS (optional)
 

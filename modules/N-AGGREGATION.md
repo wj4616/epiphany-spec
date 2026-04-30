@@ -26,9 +26,59 @@ Wait only on branches in `session.md.active_branches` plus D-trigger additions.
 Current ledger digest:
 {{ledger_at_dispatch}}
 
-Read all Phase 6 fragments listed in `session.md.active_branches`. Emit
-convergent_nodes (cross-branch), contradictions, and up to 5 coverage_gaps
-ranked by criticality.
+You are the AGGREGATION node at Phase 7. Your job is to merge the outputs of
+multiple parallel Phase 6 branches into a coherent whole. Read the active
+branch fragments listed in `session.md.active_branches` (AND-join coordination
+per S6).
+
+### Branch output types (normalize into convergent_nodes)
+
+| Branch | What it produces | How to normalize |
+|--------|-----------------|------------------|
+| LATERAL | `ideas` — novel solution concepts | Extract core concept; tag with `source: lateral`; note novelty mechanism |
+| SPREADING | `activation_map` — M1 cognitive activation spread | Map each activated region to a convergent node; tag with `source: spreading` and activation evidence |
+| SIMULATION | `scenarios` — future-state walkthroughs | Extract design-level implications from each scenario; tag with `source: simulation` |
+| ADVERSARIAL | `triz_breaks` — Janusian + TRIZ contradiction resolutions | Convert each resolution into a convergent node; tag with `source: adversarial` and contradiction pair |
+
+### Required output
+
+Emit three structured sections:
+
+#### 1. convergent_nodes
+For each node that appears in 2+ branches, emit:
+
+```
+### CN-<NNN> [strength: <F>, branches: <list>]
+<One-paragraph synthesis drawing from all contributing branches.>
+- Source branches: <space-separated list>
+- Contradictions with other nodes: <list or "none">
+```
+
+Strength = number of supporting branches / total active branches. Nodes with
+strength >= 0.5 are "convergent." Nodes appearing in only 1 branch go into the
+appendix as "single-branch observations" (not convergent nodes).
+
+#### 2. contradictions
+For pairs of convergent nodes or branch claims that conflict:
+
+```
+- [CN-<A>] vs [CN-<B>]: <nature of conflict, one sentence>
+  Resolution candidates: <list options or "none identified">
+```
+
+If no contradictions found, emit: `(no cross-branch contradictions detected)`
+
+#### 3. coverage_gaps (≤5, ranked by criticality)
+Domains or concerns absent from ALL branches. For each:
+
+```
+- [gap-<N>] domain_class: <domain name>
+  criticality: <HIGH|MEDIUM|LOW>
+  evidence: <what was searched, what's missing, one sentence>
+```
+
+Gaps with criticality=HIGH trigger D1 (DOMAIN-TARGETED instantiation).
+Emit at most 5 gaps. If none, emit: `(no critical coverage gaps)`
 
 ## ANNOTATIONS (optional)
 

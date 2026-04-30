@@ -29,6 +29,13 @@ a `source_quote` field with the verbatim text it was extracted from. HG2: every
 concept in input.md must end up in some APU OR be flagged for non_goal classification
 in Phase 3.
 
+### Required output format
+
+- **apus:** Array of `{id: APU-NNN, type: <taxonomy>, text: <one-line>, source_quote: <verbatim>}`.
+- **headline:** A single-line summary (<=120 chars) capturing the core task or
+  domain focus extracted from the decomposition. Used by N-CROSS-RUN-SEED for
+  topic detection and by the orchestrator for progress summaries.
+
 ## ANNOTATIONS (optional)
 
 If you observe a correction, non-obvious insight, open question, or

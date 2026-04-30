@@ -78,7 +78,10 @@ def main() -> int:
         print(f"ledger missing: {ledger}", file=sys.stderr)
         return 2
 
-    frag_path = args.session_dir / args.fragment
+    frag_path = (args.session_dir / args.fragment).resolve()
+    if not frag_path.is_relative_to(args.session_dir.resolve()):
+        print(f"fragment path traversal rejected: {args.fragment}", file=sys.stderr)
+        return 4
     frag_prefix = _fragment_prefix(args.fragment)
     pickup = _annotations_picked_up(frag_path, frag_prefix)
     pickup_rendered = "[" + ", ".join(pickup) + "]" if pickup else "[]"
@@ -113,8 +116,14 @@ def main() -> int:
         f"{digest}\n"
     )
 
-    with open(ledger, "a") as f:
-        f.write(block)
+    try:
+        with open(ledger, "a") as f:
+            f.write(block)
+            f.flush()
+            os.fsync(f.fileno())
+    except OSError as exc:
+        print(f"ledger write failed: {exc}", file=sys.stderr)
+        return 3
     return 0
 
 

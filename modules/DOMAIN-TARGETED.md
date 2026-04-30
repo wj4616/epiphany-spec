@@ -21,6 +21,14 @@ A coverage gap was identified in domain {{domain_class}} with rationale
 {{rationale}}. Survey this domain for concepts that should appear in the spec
 but currently do not.
 
+### Required output format
+
+- **targeted_findings:** Array of `{concept, relevance, suggested_apu_type}` for
+  concepts discovered in the domain survey.
+- **domain_class:** Echo back the domain class name the orchestrator gave you.
+  Your output MUST include the exact `domain_class` from the orchestrator's
+  substitution so cross-references stay consistent.
+
 ## ANNOTATIONS (optional)
 
 If you observe a correction, non-obvious insight, open question, or

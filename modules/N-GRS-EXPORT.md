@@ -36,6 +36,19 @@ on top of fragment-source content per S11 routing table.
 3. Write each section as `stages/spec-v<V>-section-<SS>.md` (SS = 01..17).
 4. Invoke `scripts/spec-chunk-write.sh` to concatenate.
 
+### Required output
+After completing the algorithm, populate these fields:
+
+- **written_section_paths:** Array of all `stages/spec-v<V>-section-<SS>.md`
+  paths that were written (17 entries, SS=01..17).
+- **canonical_path:** Path to the canonical exported file
+  (`stages/N-GRS-EXPORT-v<V>.md`) — this is the diff baseline.
+- **user_editable_path:** Path to the user-facing copy
+  (`stages/spec-v<V>.md`) that the human can edit at gate.
+
+These paths are consumed by the orchestrator for diff computation and gate
+signal routing. All paths are relative to the session directory.
+
 ## Section_overrides interaction (S7 routing table)
 For sections 3-7, 9-12, 14, 15: override values take precedence over freshly
 rendered fragment content. For Section 16: read-only (no overrides). Sections

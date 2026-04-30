@@ -19,8 +19,20 @@ Three techniques: **unknown-unknowns probe**, **Janusian** (hold opposites simul
 Current ledger digest:
 {{ledger_at_dispatch}}
 
-Apply the three adversarial techniques. For each, surface a finding the other
-branches would not have produced.
+## unknown_unknowns
+Probe for blind-spots: what are we NOT asking that we should be? What
+assumptions are we making without realizing it? Surface at least 3 specific
+unknowns that, if answered, could change the design direction.
+
+## janusian_pairs
+Hold two opposing truths simultaneously. For each pair, state the tension
+explicitly and what insight emerges from holding both rather than choosing one.
+Minimum 2 pairs.
+
+## triz_breaks
+Apply contradiction-driven invention. Identify at least 2 contradictions in the
+current design space and resolve each by separation principles (time, space,
+scale, condition) rather than tradeoff.
 
 ## ANNOTATIONS (optional)
 

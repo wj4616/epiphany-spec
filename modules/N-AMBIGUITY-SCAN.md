@@ -28,6 +28,20 @@ Scan session.md.apus for ambiguity, contradictions, synonym groups. Apply the
 auto-resolution rule strictly: only count occurrences in input.md, only
 auto-resolve at >=70% with N_X >= 2.
 
+### Required output format
+
+- **vague_items:** APU IDs or phrases with ambiguous referents. Each entry:
+  `{ref, issue, suggested_disambiguation (optional)}`.
+- **contradictions:** Direct logical conflicts between APU claims. Each:
+  `{apu_a, apu_b, conflict_description}`.
+- **conflict_ledger:** Superset of contradictions. Also includes near-conflicts,
+  tension pairs, and items flagged for human review. Each entry:
+  `{pair: [id_a, id_b], type: contradiction|tension|near_conflict, resolved: false}`.
+  The `resolved` field is set to `true` by the orchestrator only after human
+  gate resolution — always emit as `false`.
+- **auto_resolved_synonyms:** `{canonical: <term>, replaced: [<terms>], confidence: <0.7-1.0>}`.
+- **deferred_synonyms:** Groups below 70% threshold — forwarded to N-CLARIFY-LOOP.
+
 ## ANNOTATIONS (optional)
 
 If you observe a correction, non-obvious insight, open question, or

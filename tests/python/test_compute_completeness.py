@@ -42,7 +42,23 @@ def test_compute_all_ones_when_all_cited(tmp_path):
     assert out["overall_min"] == 1.0
 
 
-def test_compute_partial_coverage(tmp_path):
+def test_compute_with_zero_apus_returns_ones(tmp_path):
+    """Zero APUs: every sub-dimension defaults to 1.0 — no division-by-zero."""
+    spec = _spec_with(tmp_path,
+        "## 3. Invariants\n(none)\n"
+        "## 10. Falsifiability\n(none)\n"
+        "## 15. Dependency Summary\n(none)\n"
+    )
+    sm = _session(tmp_path, apus=[])
+    falsify_path = tmp_path / "stages" / "N11-FALSIFY.md"
+    falsify_path.parent.mkdir(parents=True, exist_ok=True)
+    falsify_path.write_text(yaml.safe_dump({"requirements": []}))
+    out = compute(spec, sm)
+    assert out["coverage_apus"] == 1.0
+    assert out["coverage_falsifiability"] == 1.0
+    assert out["coverage_dependency_map"] == 1.0
+    assert out["coverage_conflict_resolution"] == 1.0
+    assert out["overall_min"] == 1.0
     spec = _spec_with(tmp_path,
         "## 3. Invariants\n[APU-001]\n"
         "## 10. Falsifiability\n(none)\n"

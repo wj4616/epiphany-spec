@@ -31,6 +31,20 @@ follow S11 binding-layer order (invariants -> interfaces -> behavior ->
 implementation hints, then descriptive). Every APU not flagged non_goal
 must appear in some section's body.
 
+### Required output format
+
+- **sections:** Indexed map `{<section_number>: <markdown body>}` for sections
+  3, 4, 5 (Behavior — architectural overview), 6, 7, 9, 10, 11, 12, 15, 16.
+  Section numbers map to the canonical 17-section spec structure.
+- **hints:** Implementation guidance and forward-looking notes that accompany
+  but are distinct from the specification sections. These populate Section 6
+  (Implementation Hints) and Section 11 (Risk). Hints are advisory, not
+  normative — they guide implementers but don't constrain the spec contract.
+
+**Boundary rule:** if a statement describes WHAT the system must do, it goes in
+`sections`. If it describes HOW one MIGHT build it, it goes in `hints`.
+When uncertain, default to `sections`.
+
 ## ANNOTATIONS (optional)
 
 If you observe a correction, non-obvious insight, open question, or

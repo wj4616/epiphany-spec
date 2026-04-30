@@ -58,7 +58,12 @@ cp "$INPUT_FILE" "$SD/input.md"
 # Step 5 (compute topic_slug + spec-output dir BEFORE writing session.md so we
 # can persist the slug; algorithm authority = scripts/seed_similarity.py).
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-TOPIC_SLUG=$(python3 "$REPO/scripts/seed_similarity.py" --input "$(cat "$SD/input.md")")
+# Read input.md via file path to avoid ARG_MAX overflow from $(cat ...)
+TOPIC_SLUG=$(PYTHONPATH="$REPO" python3 -c "
+import sys
+from scripts.seed_similarity import slugify
+print(slugify(open(sys.argv[1]).read()))
+" "$SD/input.md")
 # Use PYTHONPATH so `from scripts.seed_similarity import ...` resolves.
 TRUNCATED_SLUG=$(PYTHONPATH="$REPO" python3 -c "
 import sys
@@ -73,7 +78,7 @@ while [ -e "$TARGET" ]; do
   TARGET="${OUT_BASE}-${N}"
   N=$((N+1))
 done
-mkdir "$TARGET"
+mkdir "$TARGET" || { echo "solution dir collision: $TARGET" >&2; exit 3; }
 SOLUTION_DIR="$TARGET"
 
 # Step 4: initialize session.md with all default fields + captured session_id.
@@ -89,11 +94,14 @@ case "$MODE" in
   *) echo "unknown mode: $MODE" >&2; exit 2 ;;
 esac
 
+# Sanitize FLAGS for YAML double-quoted string: escape backslash + double-quote,
+# strip newlines and control characters.
+SANITIZED_FLAGS=$(echo "$FLAGS" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '\n\r' | tr -c '[:print:]\t' ' ')
 cat > "$SD/session.md" <<EOF
 session_id: $SESSION_ID
 state: RUNNING
 scale: $MODE
-flags: "$FLAGS"
+flags: "$SANITIZED_FLAGS"
 topic_slug: $TOPIC_SLUG
 input_kind: ""
 active_branches: $ACTIVE_BRANCHES
@@ -121,6 +129,7 @@ phase_actuals: {}
 section_overrides: {}
 abort_metadata: null
 created_ts: \"$TIMESTAMP\"
+pause_ts: null
 solution_dir: $SOLUTION_DIR
 EOF
 

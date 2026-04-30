@@ -39,19 +39,23 @@ run_check() {
 }
 
 # I302 — dispatch from manifest instead of hardcoded case block.
-python3 -c "
-import json, sys
-m = json.load(open('$MANIFEST'))
-for c in m['checks']:
-    if c['phase'] == '$PHASE':
-        print(c['name'], c['script'])
-" | while read name script; do
+# Use process substitution (< <(...)) so the while loop runs in the
+# parent shell; FAIL_COUNT mutations persist.  PHASE and MANIFEST are
+# passed as argv to the inline Python so single-quote / shell-meta
+# characters in user-supplied --phase cannot escape the Python string.
+while read name script; do
     if [ "$name" = "V7b" ]; then
         run_check "$name" "$script" --spec "$SPEC" --session-md "$SM" --threshold "$INTENT_THRESHOLD"
     else
         run_check "$name" "$script" --spec "${SPEC:-/dev/null}" --session-md "$SM"
     fi
-done
+done < <(python3 -c "
+import json, sys
+m = json.load(open(sys.argv[1]))
+for c in m['checks']:
+    if c['phase'] == sys.argv[2]:
+        print(c['name'], c['script'])
+" "$MANIFEST" "$PHASE")
 
 [ "$FAIL_COUNT" -eq 0 ] || exit 1
 exit 0

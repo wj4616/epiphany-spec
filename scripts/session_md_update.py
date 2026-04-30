@@ -1,4 +1,5 @@
-"""Atomic mutator for session.md. Invoked by session-md-update.sh."""
+#!/usr/bin/env python3
+"""Atomic mutator for session.md. Invoked by session_md_update.py."""
 from __future__ import annotations
 
 import argparse
@@ -25,7 +26,11 @@ def main() -> int:
     if not sm.exists():
         print(f"session.md missing: {sm}", file=sys.stderr)
         return 2
-    data = yaml.safe_load(sm.read_text()) or {}
+    try:
+        data = yaml.safe_load(sm.read_text()) or {}
+    except yaml.YAMLError:
+        print("{halt_state: halt-session-md-unrecoverable, subreason: yaml-parse-failure, diagnostic: session.md is corrupted and unreadable}", file=sys.stderr)
+        return 4
 
     if args.merge_yaml:
         patch = yaml.safe_load(args.merge_yaml.read_text()) or {}

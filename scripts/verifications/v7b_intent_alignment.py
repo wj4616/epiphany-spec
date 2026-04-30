@@ -14,7 +14,10 @@ def run(spec_path: Path, session_md_path: Path, threshold: float = 0.7) -> dict:
     if not audit.exists():
         return {"status": "fail", "details": {"audit_fragment_missing": str(audit)}}
     data = yaml.safe_load(audit.read_text()) or {}
-    score = float(data.get("intent_alignment_score", 0.0))
+    try:
+        score = float(data.get("intent_alignment_score", 0.0))
+    except (ValueError, TypeError):
+        return {"status": "fail", "details": {"reason": "non-numeric intent_alignment_score", "raw_value": data.get("intent_alignment_score")}}
     divergence = data.get("divergence_list") or []
     if score < threshold:
         return {"status": "fail", "details": {"score": score, "threshold": threshold, "divergence_list": divergence}}

@@ -21,7 +21,22 @@ Current ledger digest:
 {{ledger_at_dispatch}}
 
 Produce the tradeoff matrix, then select a single chosen_idea. Each rejected
-alternative MUST have a kill_reason and (if applicable) `dominated_by`.
+alternative MUST have a kill_reason in the kill_criteria section and (if
+applicable) `dominated_by`.
+
+### Required output format
+
+**chosen_idea:** The single idea that advances. Include idea_id (UUID), summary,
+and why it dominates alternatives.
+
+**rejected_alternatives:** Ranked list with kill_reason per entry (why it was
+eliminated) and dominated_by where applicable.
+
+**tradeoff_matrix:** Grid: ideas (rows) vs evaluation dimensions (columns).
+Dimensions include at minimum: feasibility, novelty, coverage, risk.
+
+**kill_criteria:** List of criteria used to eliminate each rejected alternative.
+Each criterion links to the specific rejected alternative it killed.
 
 ## ANNOTATIONS (optional)
 

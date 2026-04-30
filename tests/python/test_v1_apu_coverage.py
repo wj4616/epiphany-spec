@@ -18,7 +18,9 @@ def test_v1_passes_on_valid_spec_with_all_apus_cited(tmp_path):
 
 
 def test_v1_fails_when_section_3_to_11_missing_citation(tmp_path):
-    sm = _session(tmp_path, [])  # no APUs declared = no orphan check
+    # Declare APUs that ARE cited so orphan check passes; per-section check
+    # detects missing citations in Section 7.
+    sm = _session(tmp_path, ["APU-001", "APU-002", "APU-003"])
     r = run(FIX / "missing_apu_citation.md", sm)
     assert r["status"] == "fail"
     assert 7 in r["details"]["sections_without_citation"]
@@ -47,6 +49,19 @@ def test_v1_handles_bare_references(tmp_path):
     r = run(spec, sm)
     assert r["status"] == "fail"
     assert r["details"]["uncited_apus"] == []  # orphan side passes
+
+
+def test_v1_zero_apus_passes_clean(tmp_path):
+    """Zero APUs declared: both per-section and orphan checks pass vacuously (no division)."""
+    spec = tmp_path / "zero.md"
+    spec.write_text(
+        "## 3. Invariants\n(none)\n"
+        "## 7. Constraints\n(none)\n"
+        "<!-- end -->\n"
+    )
+    sm = _session(tmp_path, [])
+    r = run(spec, sm)
+    assert r["status"] == "pass"
 
 
 def test_v1_exempt_sections_dont_need_citation(tmp_path):

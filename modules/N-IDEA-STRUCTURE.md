@@ -24,7 +24,9 @@ Current ledger digest:
 
 For each high-confidence convergent idea from N-AGGREGATION, produce an idea
 card. Choose exactly ONE shape_tag from the closed set {swap, wrap, split,
-merge, invert, defer}.
+merge, invert, defer}. For each idea, also produce a novelty_risk_plot entry
+with two axes: novelty (1–5, how different from known solutions) and risk
+(1–5, likelihood × impact of failure if this idea is chosen).
 
 ## ANNOTATIONS (optional)
 

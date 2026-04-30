@@ -21,6 +21,13 @@ Current ledger digest:
 The user rejected APU-{{target_apu_id}}. Restate it as a fresh open question
 (no falsifiability assumption). Output reformulated_query.
 
+### Required output format
+
+- **reformulated_query:** The rejected APU restated as an open question (1-3 sentences).
+- **target_apu_id:** Echo back the APU ID being refined. The orchestrator
+  substitutes `{{target_apu_id}}` with the rejected APU ID before dispatch.
+  Your output MUST include the same ID the orchestrator gave you.
+
 ## ANNOTATIONS (optional)
 
 If you observe a correction, non-obvious insight, open question, or

@@ -16,7 +16,14 @@ def run(spec_path: Path, session_md_path: Path) -> dict:
         if active:
             return {"status": "fail", "details": {"reason": "no convergent_nodes despite active branches", "active_branches": active}}
         return {"status": "pass", "details": {"reason": "no branches active"}}
-    bad = [c for c in cn if int(c.get("signal_strength", 0)) < 2]
+    bad = []
+    for c in cn:
+        try:
+            strength = int(c.get("signal_strength", 0))
+        except (ValueError, TypeError):
+            return {"status": "fail", "details": {"reason": "non-numeric signal_strength", "node": c.get("id", "unknown"), "signal_strength": c.get("signal_strength")}}
+        if strength < 2:
+            bad.append(c)
     if bad:
         return {"status": "fail", "details": {"signal_strength_below_two": bad}}
     return {"status": "pass", "details": {"count": len(cn)}}

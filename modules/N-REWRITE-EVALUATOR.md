@@ -30,3 +30,12 @@ as additive. Per-cycle re-fire limit: 2.
 Trigger: `|score_n - score_{n-1}| <= 0.05` across 2 consecutive refinement passes
 on the same idea_id, **within the same `reframe_seq` group**.
 Action: instantiate REFRAME (max 2 per idea_id; on 3rd skip + add to open_questions_queue).
+
+### Required output format (populated only when triggers fire)
+
+- **fired_triggers:** Array of trigger labels that activated this evaluation
+  (e.g. `["D1"]`, `["D2"]`, `["D1", "D2"]`, `[]`). Empty array = no triggers
+  fired = normal pass-through. Non-empty = write to `topology-trace.md`.
+- **instantiated_nodes:** Array of `{node_id, reason, trigger_label}` for each
+  dynamic node instantiated in response to fired triggers. Used by the
+  orchestrator to insert nodes into the active topology overlay.
