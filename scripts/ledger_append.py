@@ -124,6 +124,35 @@ def main() -> int:
     except OSError as exc:
         print(f"ledger write failed: {exc}", file=sys.stderr)
         return 3
+
+    # Langfuse tracing — fire-and-forget, never blocks or fails the ledger write.
+    try:
+        import subprocess as _sp
+        _tracer = Path(__file__).parent / "langfuse_tracer.py"
+        _sp.Popen(
+            [
+                sys.executable, str(_tracer), "node-span",
+                "--session-dir", str(args.session_dir),
+                "--node-id",   args.node_id,
+                "--phase",     args.phase,
+                "--cycle",     args.cycle,
+                "--hat",       args.hat,
+                "--tier",      args.tier,
+                "--exec-type", args.exec_type,
+                "--score",           args.score,
+                "--signals",         args.signals,
+                "--headline",        args.headline,
+                "--fragment",        args.fragment,
+                "--provenance-tags", args.provenance_tags,
+                "--annotations",     pickup_rendered,
+            ],
+            stdout=_sp.DEVNULL,
+            stderr=_sp.DEVNULL,
+            close_fds=True,
+        )
+    except Exception:
+        pass
+
     return 0
 
 

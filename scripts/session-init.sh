@@ -147,3 +147,6 @@ ln -s "$SOLUTION_DIR" "$SD/spec-export"
 echo "$SD"
 echo "topic_slug: $TOPIC_SLUG"
 echo "solution_dir: $SOLUTION_DIR"
+
+# Langfuse tracing — non-blocking, errors are suppressed.
+python3 "$REPO/scripts/langfuse_tracer.py" init --session-dir "$SD" 2>/dev/null || true

@@ -19,8 +19,22 @@ Current ledger digest:
 
 Audit the rendered spec output (read N-SPEC-CONSTRUCT fragment) for structural
 issues: missing section headers, mis-ordered sections, untagged APUs, malformed
-constraint headers. Surface every issue as a structural_finding. Surface user-
-visible WARNING-level items as human_decision_warnings.
+constraint headers. Surface every issue as a structural_finding.
+
+## Decision classification (BUG-8 fix)
+
+Split warnings into two categories:
+
+- **human_decision_warnings:** WARNING-level items that genuinely require
+  human judgment (scope trade-offs, ambiguous requirements, conflicting
+  stakeholder preferences).
+- **auto_fixed_items:** Non-controversial mechanical issues (indentation,
+  header style, trailing whitespace, missing punctuation, numbering gaps)
+  that the node applies a deterministic fix to directly. Each entry:
+  `{issue, fix_applied, section}`.
+
+Auto-fixes are applied to `session.md.section_overrides` directly; they do
+NOT pause the gate. Only `human_decision_warnings` are surfaced at the gate.
 
 ## ANNOTATIONS (optional)
 

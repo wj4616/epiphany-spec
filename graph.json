@@ -24,6 +24,18 @@
       ]
     },
     {
+      "id": "N-VERBATIM-GUARD",
+      "module_file": "modules/N-VERBATIM-GUARD.md",
+      "phase": 0,
+      "exec_type": "inline",
+      "tier": "small",
+      "hat": "verbatim-guardian",
+      "required_output_sections": [
+        "locked_verbatim_blocks",
+        "verbatim_inventory"
+      ]
+    },
+    {
       "id": "N-CROSS-RUN-SEED",
       "module_file": "modules/N-CROSS-RUN-SEED.md",
       "phase": "0_5",
@@ -100,6 +112,19 @@
         "conflict_ledger",
         "auto_resolved_synonyms",
         "deferred_synonyms"
+      ]
+    },
+    {
+      "id": "N-AUTO-RESOLVE",
+      "module_file": "modules/N-AUTO-RESOLVE.md",
+      "phase": 5,
+      "exec_type": "inline",
+      "tier": "small",
+      "hat": "auto-resolver",
+      "required_output_sections": [
+        "resolved_items",
+        "remaining_human_items",
+        "resolution_log"
       ]
     },
     {
@@ -288,6 +313,18 @@
       ]
     },
     {
+      "id": "N-ARTIFACT-GENERATOR",
+      "module_file": "modules/N-ARTIFACT-GENERATOR.md",
+      "phase": 11,
+      "exec_type": "inline",
+      "tier": "medium",
+      "hat": "artifact-generator",
+      "required_output_sections": [
+        "artifacts",
+        "artifact_paths"
+      ]
+    },
+    {
       "id": "N-SPEC-AUDIT-MECHANICAL",
       "module_file": "modules/N-SPEC-AUDIT-MECHANICAL.md",
       "phase": 12,
@@ -380,6 +417,11 @@
     },
     {
       "from": "N-CROSS-RUN-SEED",
+      "to": "N-VERBATIM-GUARD",
+      "kind": "forward"
+    },
+    {
+      "from": "N-VERBATIM-GUARD",
       "to": "N-RESTATE",
       "kind": "forward"
     },
@@ -405,6 +447,11 @@
     },
     {
       "from": "N-AMBIGUITY-SCAN",
+      "to": "N-AUTO-RESOLVE",
+      "kind": "forward"
+    },
+    {
+      "from": "N-AUTO-RESOLVE",
       "to": "N-CLARIFY-LOOP",
       "kind": "forward"
     },
@@ -489,6 +536,11 @@
     },
     {
       "from": "N-SPEC-CONSTRUCT",
+      "to": "N-ARTIFACT-GENERATOR",
+      "kind": "forward"
+    },
+    {
+      "from": "N-ARTIFACT-GENERATOR",
       "to": "N-SPEC-AUDIT-MECHANICAL",
       "kind": "forward"
     },

@@ -8,6 +8,8 @@
     {"name": "V6",  "script": "v6_falsifiability.py",          "phase": "post-grs-export"},
     {"name": "V7a", "script": "v7a_structural.py",             "phase": "post-grs-export"},
     {"name": "V7b", "script": "v7b_intent_alignment.py",       "phase": "post-grs-export"},
-    {"name": "V8",  "script": "v8_file_save.py",               "phase": "post-grs-export"}
+    {"name": "V8",  "script": "v8_file_save.py",               "phase": "post-grs-export"},
+    {"name": "V9",  "script": "v9_verbatim_preservation.py",    "phase": "post-grs-export"},
+    {"name": "V10", "script": "v10_structure_adherence.py",    "phase": "post-grs-export"}
   ]
 }

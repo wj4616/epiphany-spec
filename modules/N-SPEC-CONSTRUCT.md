@@ -33,17 +33,34 @@ must appear in some section's body.
 
 ### Required output format
 
-- **sections:** Indexed map `{<section_number>: <markdown body>}` for sections
-  3, 4, 5 (Behavior — architectural overview), 6, 7, 9, 10, 11, 12, 15, 16.
-  Section numbers map to the canonical 17-section spec structure.
+- **section_map:** Ordered array declaring the full output section structure.
+  Each entry: `{section_number, section_title, content_source, is_normative}`.
+  - `section_number`: supports arbitrary numbering (`5`, `5.5`, `6`, `A`, `B`)
+    to honor input-requested structure (BUG-16 fix).
+  - `content_source`: key referencing the GRS state lookup table (see
+    N-GRS-EXPORT.md source_key list).
+  - `is_normative`: `true` for binding spec contract, `false` for advisory/
+    appendix content.
+  Default: emit the canonical 17-section map if input.md does not request
+  a custom structure.
+- **sections:** Indexed map `{<section_number>: <markdown body>}` for all
+  normative sections declared in `section_map`. Every APU not flagged non_goal
+  must appear in some section's body.
 - **hints:** Implementation guidance and forward-looking notes that accompany
-  but are distinct from the specification sections. These populate Section 6
-  (Implementation Hints) and Section 11 (Risk). Hints are advisory, not
+  but are distinct from the specification sections. Hints are advisory, not
   normative — they guide implementers but don't constrain the spec contract.
+- **artifact_refs:** Array of `{artifact_id, referenced_in_section}` linking
+  N-ARTIFACT-GENERATOR output into the relevant spec sections.
 
 **Boundary rule:** if a statement describes WHAT the system must do, it goes in
 `sections`. If it describes HOW one MIGHT build it, it goes in `hints`.
 When uncertain, default to `sections`.
+
+**Schema-adaptive rule (BUG-10 fix):** Do NOT assume a fixed 17-section
+output. Read `input.md` for any explicit section requests (e.g., "Appendix C",
+"Section 5.5", "Mode Matrix table"). Map these into `section_map` with
+appropriate `content_source` values. If `input.md` is silent on structure, use
+the canonical 17-section default.
 
 ## ANNOTATIONS (optional)
 

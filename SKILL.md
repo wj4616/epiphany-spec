@@ -1,6 +1,6 @@
 ---
 name: epiphany-spec
-version: 1.0.0
+version: 1.1.0
 description: >
   Graph-of-Thought brainstorm-to-specification skill (Excavate -> Distill -> Crystallize).
   Takes raw or enhanced input and produces a versioned, audited spec doc with a
@@ -507,29 +507,16 @@ Sequential sub-steps:
    `stages/N1-RESTATE.md`).
 2b. **V4 + V5** (fragment/trace-only -- runnable before spec file exists). Run via
     `bash scripts/validate-spec-doc.sh --phase pre-grs-export --session-dir <path>`.
-3. **N-GRS-EXPORT** (no-llm; canonical first then user copy):
-    - Render Sections 1..16 from the spec section map:
-      | Sec | Content source |
-      |-----|----------------|
-      | 1   | session.md.flags.title or input first line |
-      | 2   | N-RESTATE locked vocabulary output |
-      | 3   | N-INTENT-LAYER invariants |
-      | 4   | N-DECOMPOSE-APU interface boundaries |
-      | 5   | N-SPEC-CONSTRUCT sections[5] (architectural overview) |
-      | 6   | N-INTENT-LAYER + N-CONSTRAINT-INVENTORY APUs |
-      | 7   | N-CONSTRAINT-INVENTORY + N-ADVERSARIAL constraints |
-      | 8   | session.md.apus full list |
-      | 9   | N-DEPENDENCY-MAP dependency graph |
-      | 10  | N-FALSIFY falsifiability tests |
-      | 11  | N-FORWARD-CHAIN-BATCH forward chain |
-      | 12  | N-INTENT-LAYER non-goals |
-      | 13  | Decision log (ledger-sourced) |
-      | 14  | N-PRUNE tradeoff matrix |
-      | 15  | N-AGGREGATION convergent nodes + contradictions |
-      | 16  | N-SPEC-AUDIT-MECHANICAL audit summary |
-    - Render Handoff Bundle as section 17 (7-artifact YAML).
+3. **N-GRS-EXPORT** (no-llm; schema-adaptive; canonical first then user copy):
+    - Read `section_map` from N-SPEC-CONSTRUCT output (ordered array of
+      `{section_number, section_title, content_source, is_normative}`).
+    - If no section_map exists, fall back to the canonical 17-section default.
+    - Support arbitrary numbering: `5`, `5.5`, `6`, `A`, `B` etc.
+    - Render each section by looking up its `content_source` in GRS state
+      (see N-GRS-EXPORT.md module for the source_key table).
+    - Render Handoff Bundle as the final section.
     - Apply `session.md.section_overrides` per routing.
-    - Write `stages/spec-v<V>-section-{01..17}.md`.
+    - Write `stages/spec-v<V>-section-<SS>.md` (SS from section_map).
     - Invoke `bash scripts/spec-chunk-write.sh --session-dir <path> --version <V>
       --solution-dir <solution-path>`.
 3b. **V1a, V1b, V2, V3, V6, V7a, V7b, V8** (spec-file-dependent -- must run
@@ -552,7 +539,7 @@ Open questions: <K>  Conflicts: <M>  Score-stagnant items: <P>
 Decision warnings: <W>   (from N-SPEC-AUDIT-MECHANICAL.human_decision_warnings + post-signal orchestrator check)
 V-check warnings: <V>    (failed/deadlocked checks from session.md.verification_log;
                           [V5-AUDIT-FAIL] is warning only;
-                          V1a/V1b/V2/V3/V6/V7a/V7b [VERIFICATION-DEADLOCK] block [APPROVE];
+                          V1a/V1b/V2/V3/V6/V7a/V7b/V9/V10 [VERIFICATION-DEADLOCK] block [APPROVE];
                           V8 deadlock blocks finalize)
 
 To resume, reply with ONE of:
@@ -678,6 +665,10 @@ All V-checks run via `scripts/validate-spec-doc.sh` and log to
 - V7a -> Phase 11 N-SPEC-CONSTRUCT
 - V7b -> Phase 11 N-SPEC-CONSTRUCT
 - V8 -> re-run `spec-chunk-write.sh` per step 5 (own recovery path)
+- V9 -> Phase 0 N-VERBATIM-GUARD (re-extract verbatim locks) then Phase 11
+  N-SPEC-CONSTRUCT (re-render with locks enforced; BUG-13 fix)
+- V10 -> Phase 11 N-SPEC-CONSTRUCT (rebuild section_map to match input
+  structure; BUG-12 fix)
 
 ### Loop protection
 **Max 2 re-routes per check** in a single session. 3rd FAIL -> emit
@@ -690,6 +681,8 @@ All V-checks run via `scripts/validate-spec-doc.sh` and log to
 - Per-thought advance < 0.6 -> does NOT advance (M3 zero-fatigue).
 - Sign-off completeness >= 0.8 (`min(coverage_apus, coverage_falsifiability,
   coverage_dependency_map, coverage_conflict_resolution)`).
+- Intent alignment >= 0.9 (v1.1; BUG-9 fix). If `intent_alignment_score < 0.9`,
+  targeted re-route per N-SPEC-AUDIT-SEMANTIC's `recommended_re_route_node`.
 
 ### V-check failure after [APPROVE]
 - V8: re-run from last completed section in `write_progress`. If V8 passes on
@@ -720,3 +713,50 @@ Suppressed when `--quiet` is also present.
 **Other flags do not modify the announce string.** `--xml`, `--deep`,
 `--minimal`, `--improve` (reserved), `--resume`, and all numeric/model
 overrides produce no additional announce text beyond the mode line above.
+
+## LANGFUSE TRACING (OPTIONAL)
+
+Traces epiphany-spec runs to Langfuse. Enabled when
+`~/.claude/skills/epiphany-spec/langfuse.env` contains non-empty credentials.
+**Tracing failures are non-fatal** — catch stderr output and continue.
+
+### Call sites (all via Bash whitelist)
+
+**1. After SESSION INIT** (after `session-init.sh` returns and PRC1 passes):
+```
+python3 ~/.claude/skills/epiphany-spec/scripts/langfuse_tracer.py init \
+  --session-dir <SD>
+```
+On success prints `[langfuse_tracer] trace created: <url>` — emit this URL to
+the user as an informational note only if `--verbose` is set.
+
+**2. After every `ledger_append.py` call** (step 8 of the ready-set loop):
+```
+python3 ~/.claude/skills/epiphany-spec/scripts/langfuse_tracer.py node-span \
+  --session-dir <SD> \
+  --node-id <N.node_id> \
+  --phase <P> \
+  --cycle <C> \
+  --hat <hat> \
+  --tier <tier> \
+  --exec-type <exec_type> \
+  --score <score> \
+  --signals '<signals_json>' \
+  --headline '<headline>'
+```
+Pass the same args used for `ledger_append.py`. Quote `--signals` and
+`--headline` carefully (same quoting rules as the ledger script).
+
+**3. On finalization** (after `finalize-spec.sh` succeeds in Phase 12) or
+on `[ABORT]` signal:
+```
+python3 ~/.claude/skills/epiphany-spec/scripts/langfuse_tracer.py finalize \
+  --session-dir <SD> \
+  --spec-path <path/to/spec-final.md>   \
+  --state FINALIZED
+```
+For `[ABORT]`: omit `--spec-path`, set `--state ABORTED`.
+
+### State file
+The tracer writes `<SD>/.langfuse_state.json` (trace_id, node_count, URL).
+This file is internal to the tracer; do NOT read or mutate it directly.
