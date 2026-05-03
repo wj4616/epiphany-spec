@@ -51,7 +51,12 @@ on top of fragment-source content per S11 routing table.
 3. **Apply `section_overrides[<N>]`** over rendered content.
 4. **Write each section** as `stages/spec-v<V>-section-<SS>.md`
    (SS = zero-padded section number from the section_map).
-5. **Invoke `scripts/spec-chunk-write.sh`** to concatenate in section_map order.
+   **Version source:** `V = session.md.current_version`. Read this AFTER the
+   orchestrator has incremented it (increment happens before N-GRS-EXPORT
+   dispatch in the approval cycle). On the initial Phase 12 run, V = 0.
+   After the first [REJECT]/[ADD]/[APPROVE WITH EDITS] cycle, V = 1, etc.
+5. **Invoke `scripts/spec-chunk-write.sh`** to concatenate in section_map order,
+   passing `--version <V>` (same V as step 4).
 
 ### Required output
 After completing the algorithm, populate these fields:

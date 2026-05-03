@@ -16,7 +16,7 @@ session_output_base: ~/docs/epiphany/spec/
 spec_output_base: ~/docs/solution/
 ---
 
-# epiphany-spec v1.0.0 -- Orchestrator
+# epiphany-spec v1.1.0 -- Orchestrator
 
 You are the **orchestrator** of `epiphany-spec`. You execute a Graph-of-Thought
 pipeline declared in `graph.json`. Some nodes run **inline** in your own
@@ -33,10 +33,13 @@ finalize on `[APPROVE]`.
 ## ARCHITECTURE
 
 - **`SKILL.md` (this file):** orchestrator. You are the main agent.
-- **`graph.json`:** static topology + inactive rewrite-rule templates. Single
-  source of truth for nodes, forward/back/dynamic edges, exec types, tiers.
-- **`hats.json`:** `{hat-name -> tier}` map. Tier resolves to model-id via
-  default-models or `--model-{large,medium,small}` flags.
+- **`graph.json`:** static topology + dynamic instantiation templates
+  (`dynamic_templates` key). Single source of truth for nodes,
+  forward/back/dynamic edges, exec types, tiers, and dynamic node templates
+  (DOMAIN-TARGETED, RANDOM-ENTRY, REFRAME).
+- **`hats.json`:** `{tiers: {tier -> [hat-names]}, default_models: {...}}` registry.
+  Lookup: `tier = hats.json.tiers.<level>.includes(N.hat) ? <level> : error`.
+  Tier resolves to model-id via `default_models` or `--model-{large,medium,small}` flags.
 - **`modules/N*.md`:** per-node protocols with YAML frontmatter
   `{node_id, phase, hat, exec_type, required_output_sections}`. Inline nodes
   read by you; spawn nodes dispatched via `Agent` tool. No-llm nodes execute
@@ -167,6 +170,7 @@ Inventory:
 | `halt-reject-resolution-fail`   | [REJECT items: <ref>] | section ref -> zero APUs |
 | `halt-section-readonly-violation` | [APPROVE WITH EDITS] | edit to read-only section/subfield |
 | `halt-hg2-violation`            | [APPROVE WITH EDITS] | edit to HG2-protected source intent |
+| `halt-intent-alignment-deadlock` | V-check post Phase 12 | intent_alignment_score < 0.9 after 2 re-routes; blocks [APPROVE]; overrideable via [APPROVE WITH EDITS] with explicit acknowledgment |
 | `halt-time-budget-hardcap`      | per-phase budget | actual > 3x rounded budget |
 | `halt-session-md-unrecoverable` | session.md corruption recovery exhausted | `.bak` also unreadable (Pass-3 F205: v1.0 has only the .bak fallback; reconstruction-from-ledger deferred to v1.1) |
 
@@ -535,12 +539,15 @@ SPEC HUMAN REVIEW GATE -- session <id>, version v<N>
 
 Spec written to ~/docs/solution/<DD-MM-slug>/spec-v<N>.md
 Completeness score: <X>/1.0 (threshold 0.8)
+Intent alignment: <IA>/1.0 (threshold 0.9; below threshold blocks [APPROVE])
 Open questions: <K>  Conflicts: <M>  Score-stagnant items: <P>
 Decision warnings: <W>   (from N-SPEC-AUDIT-MECHANICAL.human_decision_warnings + post-signal orchestrator check)
 V-check warnings: <V>    (failed/deadlocked checks from session.md.verification_log;
                           [V5-AUDIT-FAIL] is warning only;
                           V1a/V1b/V2/V3/V6/V7a/V7b/V9/V10 [VERIFICATION-DEADLOCK] block [APPROVE];
-                          V8 deadlock blocks finalize)
+                          V8 deadlock blocks finalize;
+                          intent_alignment_score < 0.9 blocks [APPROVE] — re-route via
+                          N-SPEC-AUDIT-SEMANTIC.recommended_re_route_node first)
 
 To resume, reply with ONE of:
   [APPROVE]                  — finalize as spec-final.md (auto-detects file edits *)
@@ -681,8 +688,13 @@ All V-checks run via `scripts/validate-spec-doc.sh` and log to
 - Per-thought advance < 0.6 -> does NOT advance (M3 zero-fatigue).
 - Sign-off completeness >= 0.8 (`min(coverage_apus, coverage_falsifiability,
   coverage_dependency_map, coverage_conflict_resolution)`).
-- Intent alignment >= 0.9 (v1.1; BUG-9 fix). If `intent_alignment_score < 0.9`,
-  targeted re-route per N-SPEC-AUDIT-SEMANTIC's `recommended_re_route_node`.
+- Intent alignment >= 0.9 (v1.1; BUG-9 fix). If `intent_alignment_score < 0.9`:
+  1. Targeted re-route per N-SPEC-AUDIT-SEMANTIC's `recommended_re_route_node`.
+  2. Re-check after re-route (max 2 re-routes per check, same as standard loop).
+  3. If still < 0.9 after 2 re-routes: emit `[INTENT-ALIGNMENT-DEADLOCK
+     score=<X>]`, surface in gate block V-check warnings, **block [APPROVE]**
+     until human explicitly overrides via `[APPROVE WITH EDITS]` after
+     acknowledging the alignment warning in their message.
 
 ### V-check failure after [APPROVE]
 - V8: re-run from last completed section in `write_progress`. If V8 passes on
