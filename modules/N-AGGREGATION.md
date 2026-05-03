@@ -77,8 +77,9 @@ Domains or concerns absent from ALL branches. For each:
   evidence: <what was searched, what's missing, one sentence>
 ```
 
-Gaps with criticality=HIGH trigger D1 (DOMAIN-TARGETED instantiation).
-Emit at most 5 gaps. If none, emit: `(no critical coverage gaps)`
+All non-empty `coverage_gaps` trigger D1 (DOMAIN-TARGETED instantiation)
+regardless of criticality. The orchestrator prioritizes dispatch by
+criticality (HIGH first). Emit at most 5 gaps. If none, emit: `(no coverage gaps)`
 
 ## ANNOTATIONS (optional)
 

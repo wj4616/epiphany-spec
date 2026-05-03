@@ -2,7 +2,7 @@
 node_id: N-CROSS-RUN-SEED
 phase: 0_5
 hat: null
-exec_type: inline
+exec_type: no-llm
 required_output_sections: [injected_nodes, source_sessions, scan_ts, stopwords_hash]
 ---
 

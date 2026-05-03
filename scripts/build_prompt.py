@@ -21,7 +21,14 @@ def _read_module(path: Path) -> tuple[str, str]:
     """Return (frontmatter, body)."""
     text = path.read_text()
     if text.startswith("---\n"):
-        end = text.index("\n---\n", 4)
+        try:
+            end = text.index("\n---\n", 4)
+        except ValueError:
+            print(
+                f"[BUILD-PROMPT-MALFORMED-FRONTMATTER module={path.name}]",
+                file=sys.stderr,
+            )
+            sys.exit(5)
         return text[4:end], text[end + 5:]
     return "", text
 

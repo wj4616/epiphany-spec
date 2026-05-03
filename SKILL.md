@@ -256,7 +256,10 @@ they had completed (they were never going to fire this run).
 The orchestrator picks ready nodes in graph-declared order:
 
 1. Resolve next ready node `N`.
-2. Look up tier via `hats.json[N.hat]`.
+2. Look up tier: iterate `hats.json.tiers` (keys: `large`, `medium`, `small`,
+   `no-llm`); the first key whose array contains `N.hat` is the tier. If
+   `N.hat` is null or not found in any array: default to `medium` and emit
+   `[TIER-LOOKUP-MISS hat=<H>]` informational.
 3. Compose `{{ledger_at_dispatch}}` by invoking
    `python3 scripts/ledger_digest.py --session-dir <SD> --max-entries 8 --max-bytes 8192`
    and substituting its stdout into the prompt template (F106 — deterministic;
@@ -503,7 +506,7 @@ item logged in session.md.open_questions_queue).
 | State | Description | Transitions to |
 |---|---|---|
 | `RUNNING` | Pipeline executing | `AWAITING_CLARIFY` (Phase 5 pause), `AWAITING_GATE` (Phase 12 pause) |
-| `AWAITING_CLARIFY` | Paused inside Phase 5 | `RUNNING` on labeled answers or `[SKIP]` |
+| `AWAITING_CLARIFY` | Paused inside Phase 5 | `RUNNING` on labeled answers or `[SKIP]`; `ABORTED` on `[ABORT]` |
 | `AWAITING_GATE` | Paused at Phase 12 gate | `RUNNING` on `[REJECT]`/`[ADD]`/`[APPROVE WITH EDITS]`; `AWAITING_REWORK_CONFIRM` on `[REWORK]`; `FINALIZED` on clean `[APPROVE]`; `ABORTED` on `[ABORT]` |
 | `AWAITING_REWORK_CONFIRM` | Awaiting `[CONFIRM-REWORK]` | `RUNNING` on `[CONFIRM-REWORK]`; `AWAITING_GATE` on any other reply |
 | `FINALIZED` | `spec-final.md` written | Terminal |
@@ -561,6 +564,7 @@ To resume, reply with ONE of:
   [APPROVE WITH EDITS]       — explicit confirmation that you edited the file
   [REJECT items: <ids>]      — APU IDs (e.g., APU-007) or section refs (e.g., 4.2);
                                routes through N-REFINE-QUERY → N-FALSIFY
+                               (exception: 14.1 routes to N-PRUNE re-execution)
   [ADD: <text>]              — new APU; runs N-FALSIFY + N-FORWARD-CHAIN-BATCH +
                                N-DEPENDENCY-MAP for that item only
   [REWORK from phase <N>]    — major rethink; re-enters at named phase 0..12

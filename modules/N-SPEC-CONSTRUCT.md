@@ -3,7 +3,7 @@ node_id: N-SPEC-CONSTRUCT
 phase: 11
 hat: decomposer
 exec_type: inline
-required_output_sections: [sections, hints]
+required_output_sections: [section_map, sections, hints]
 ---
 
 # N-SPEC-CONSTRUCT -- Phase 11 Specification Construction
