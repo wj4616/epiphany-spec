@@ -283,7 +283,7 @@
         "spawn"
       ],
       "exec_decision": "inline if apu_count <= 30 else spawn (cap-pressure exception per \u00a74 may force inline)",
-      "tier": "large",
+      "tier": "medium",
       "hat": "aggregator",
       "required_output_sections": [
         "chained_implications"
@@ -525,14 +525,21 @@
       "kind": "forward"
     },
     {
-      "from": "N-FORWARD-CHAIN-BATCH",
+      "from": "N-FALSIFY",
       "to": "N-DEPENDENCY-MAP",
       "kind": "forward"
     },
     {
+      "from": "N-FORWARD-CHAIN-BATCH",
+      "to": "N-SPEC-CONSTRUCT",
+      "kind": "forward",
+      "label": "AND-join"
+    },
+    {
       "from": "N-DEPENDENCY-MAP",
       "to": "N-SPEC-CONSTRUCT",
-      "kind": "forward"
+      "kind": "forward",
+      "label": "AND-join"
     },
     {
       "from": "N-SPEC-CONSTRUCT",

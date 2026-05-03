@@ -286,8 +286,15 @@ The orchestrator picks ready nodes in graph-declared order:
      prompt body to `Agent(subagent_type=general-purpose, ...)`. Required
      output sections must be returned as a YAML block.
 6. Write fragment to `stages/N<P>-<NodeName>[-<seq>].md` (fragment naming per GRS layout above; seq suffix only on re-fire passes).
-7. Run **N-SCORE** (mixed tier -- see modules/N-SCORE.md): LLM-judged for
-   creative-divergence nodes, deterministic for templating/transformation.
+7. Run **N-SCORE**:
+   - **Deterministic path** (all nodes except the 7 creative-divergence nodes
+     listed below): compute `score = populated_required_sections /
+     total_required_sections` inline. Do NOT invoke `ledger_digest.py`,
+     do NOT role-switch to N-SCORE. Record `trigger_mode: deterministic`.
+   - **LLM-judged path** (Phase 6 branches: LATERAL, SPREADING, SIMULATION,
+     ADVERSARIAL; plus N-AGGREGATION, REFRAME, RANDOM-ENTRY): dispatch
+     N-SCORE normally — role-switch to `scorer` hat, run `ledger_digest.py`,
+     call model-small per modules/N-SCORE.md.
 8. Append ledger entry: `python3 scripts/ledger_append.py --session-dir ... --node-id <N>
    --phase <P> --cycle <C> --fragment <path> --hat <hat> --tier <tier>
    --exec-type <type> --score <s> --signals '<json>' --provenance-tags '<list>'
