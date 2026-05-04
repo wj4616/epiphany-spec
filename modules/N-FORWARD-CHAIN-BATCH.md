@@ -5,6 +5,7 @@ hat: aggregator
 exec_type: inline
 exec_type_alternatives: [spawn]
 exec_decision: "inline if apu_count <= 30 else spawn (cap-pressure exception per S4 may force inline)"
+tier: medium
 required_output_sections: [chained_implications]
 ---
 

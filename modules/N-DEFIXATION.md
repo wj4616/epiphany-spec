@@ -2,7 +2,7 @@
 node_id: N-DEFIXATION
 phase: cross-cutting
 hat: null
-exec_type: inline
+exec_type: no-llm
 required_output_sections: [prefix_text]
 ---
 

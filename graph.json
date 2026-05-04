@@ -24,6 +24,18 @@
       ]
     },
     {
+      "id": "N-VERBATIM-GUARD",
+      "module_file": "modules/N-VERBATIM-GUARD.md",
+      "phase": 0,
+      "exec_type": "inline",
+      "tier": "small",
+      "hat": "verbatim-guardian",
+      "required_output_sections": [
+        "locked_verbatim_blocks",
+        "verbatim_inventory"
+      ]
+    },
+    {
       "id": "N-CROSS-RUN-SEED",
       "module_file": "modules/N-CROSS-RUN-SEED.md",
       "phase": "0_5",
@@ -100,6 +112,19 @@
         "conflict_ledger",
         "auto_resolved_synonyms",
         "deferred_synonyms"
+      ]
+    },
+    {
+      "id": "N-AUTO-RESOLVE",
+      "module_file": "modules/N-AUTO-RESOLVE.md",
+      "phase": 5,
+      "exec_type": "inline",
+      "tier": "small",
+      "hat": "auto-resolver",
+      "required_output_sections": [
+        "resolved_items",
+        "remaining_human_items",
+        "resolution_log"
       ]
     },
     {
@@ -258,7 +283,7 @@
         "spawn"
       ],
       "exec_decision": "inline if apu_count <= 30 else spawn (cap-pressure exception per \u00a74 may force inline)",
-      "tier": "large",
+      "tier": "medium",
       "hat": "aggregator",
       "required_output_sections": [
         "chained_implications"
@@ -285,6 +310,18 @@
       "required_output_sections": [
         "sections",
         "hints"
+      ]
+    },
+    {
+      "id": "N-ARTIFACT-GENERATOR",
+      "module_file": "modules/N-ARTIFACT-GENERATOR.md",
+      "phase": 11,
+      "exec_type": "inline",
+      "tier": "medium",
+      "hat": "artifact-generator",
+      "required_output_sections": [
+        "artifacts",
+        "artifact_paths"
       ]
     },
     {
@@ -380,6 +417,11 @@
     },
     {
       "from": "N-CROSS-RUN-SEED",
+      "to": "N-VERBATIM-GUARD",
+      "kind": "forward"
+    },
+    {
+      "from": "N-VERBATIM-GUARD",
       "to": "N-RESTATE",
       "kind": "forward"
     },
@@ -405,6 +447,11 @@
     },
     {
       "from": "N-AMBIGUITY-SCAN",
+      "to": "N-AUTO-RESOLVE",
+      "kind": "forward"
+    },
+    {
+      "from": "N-AUTO-RESOLVE",
       "to": "N-CLARIFY-LOOP",
       "kind": "forward"
     },
@@ -478,17 +525,29 @@
       "kind": "forward"
     },
     {
-      "from": "N-FORWARD-CHAIN-BATCH",
+      "from": "N-FALSIFY",
       "to": "N-DEPENDENCY-MAP",
       "kind": "forward"
     },
     {
+      "from": "N-FORWARD-CHAIN-BATCH",
+      "to": "N-SPEC-CONSTRUCT",
+      "kind": "forward",
+      "label": "AND-join"
+    },
+    {
       "from": "N-DEPENDENCY-MAP",
       "to": "N-SPEC-CONSTRUCT",
-      "kind": "forward"
+      "kind": "forward",
+      "label": "AND-join"
     },
     {
       "from": "N-SPEC-CONSTRUCT",
+      "to": "N-ARTIFACT-GENERATOR",
+      "kind": "forward"
+    },
+    {
+      "from": "N-ARTIFACT-GENERATOR",
       "to": "N-SPEC-AUDIT-MECHANICAL",
       "kind": "forward"
     },
@@ -566,7 +625,10 @@
       "required_output_sections": [
         "targeted_findings",
         "domain_class"
-      ]
+      ],
+      "trigger": "D1: N-AGGREGATION emits coverage_gaps non-empty (<=5 entries)",
+      "routing": "Fan-in to N-AGGREGATION re-fire (AND-join over original branches + new domain-targeted outputs). Spawn 1 slot per instance + 1 for AGG re-fire.",
+      "instantiation_limit": "<=5 per D1 trigger (one per coverage gap, priority by criticality)"
     },
     "RANDOM-ENTRY": {
       "module_file": "modules/RANDOM-ENTRY.md",
@@ -575,7 +637,10 @@
       "hat": "random-injector",
       "required_output_sections": [
         "random_concepts"
-      ]
+      ],
+      "trigger": "D2: N-SPREADING convergent_node_count below mode threshold (MINIMAL=0, STANDARD<3, DEEP<5)",
+      "routing": "Additive N-AGGREGATION input (new edge). Always paired with DEFIXATION back-edge on N-SPREADING.",
+      "instantiation_limit": "1 per D2 trigger cycle; MINIMAL mode: degrades to inline"
     },
     "REFRAME": {
       "module_file": "modules/REFRAME.md",
@@ -585,7 +650,16 @@
       "required_output_sections": [
         "reframed_idea",
         "frame_history_entry"
-      ]
+      ],
+      "trigger": "D3: |score_n - score_{n-1}| <= 0.05 across 2 consecutive refinement passes on same idea_id within same reframe_seq group",
+      "routing": "Output replaces stagnant idea content; idea_id UUID survives. Tracked in session.md.idea_refinement_history.",
+      "instantiation_limit": "max 2 per idea_id; 3rd triggers D3-REFRAME-LIMIT downgrade-and-continue"
+    },
+    "DEFIXATION_PREFIX": {
+      "description": "D2 DEFIXATION prefix injected into N-SPREADING re-fire prompt. Not a spawned node \u2014 content: \"Set aside all previous solution attempts. They are invalid for this pass. Begin from scratch.\"",
+      "trigger": "D2: paired with RANDOM-ENTRY instantiation",
+      "routing": "Prepended verbatim to N-SPREADING module prompt on re-fire; N-SPREADING itself is a static node (in graph.nodes)",
+      "instantiation_limit": "same as RANDOM-ENTRY (1 per D2 trigger cycle)"
     }
   }
 }

@@ -38,6 +38,9 @@ REQUIRED_SCRIPTS = [
     "scripts/build_prompt.py",
     "scripts/compute_completeness.py",
     "scripts/validate-graph.py",
+    "scripts/d1_trigger_eval.py",
+    "scripts/d2_trigger_eval.py",
+    "scripts/d3_trigger_eval.py",
 ]
 
 from scripts._module_validators import (

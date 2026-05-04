@@ -31,7 +31,12 @@ auto-resolve at >=70% with N_X >= 2.
 ### Required output format
 
 - **vague_items:** APU IDs or phrases with ambiguous referents. Each entry:
-  `{ref, issue, suggested_disambiguation (optional)}`.
+  `{ref, issue, suggested_disambiguation (optional), resolution_recommendation: auto|human}`.
+  `resolution_recommendation` classifier (v1.1):
+  - `auto` = item has a clear default answer (mode names, scope defaults,
+    formatting-only issues). These flow to N-AUTO-RESOLVE.
+  - `human` = item requires subjective judgment or domain expertise. These
+    flow to N-CLARIFY-LOOP.
 - **contradictions:** Direct logical conflicts between APU claims. Each:
   `{apu_a, apu_b, conflict_description}`.
 - **conflict_ledger:** Superset of contradictions. Also includes near-conflicts,
@@ -40,7 +45,8 @@ auto-resolve at >=70% with N_X >= 2.
   The `resolved` field is set to `true` by the orchestrator only after human
   gate resolution — always emit as `false`.
 - **auto_resolved_synonyms:** `{canonical: <term>, replaced: [<terms>], confidence: <0.7-1.0>}`.
-- **deferred_synonyms:** Groups below 70% threshold — forwarded to N-CLARIFY-LOOP.
+- **deferred_synonyms:** Groups below 70% threshold — forwarded to N-AUTO-RESOLVE
+  for tie-breaking or to N-CLARIFY-LOOP if tie-breaking fails (v1.1).
 
 ## ANNOTATIONS (optional)
 

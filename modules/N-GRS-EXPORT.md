@@ -13,28 +13,50 @@ required_output_sections: [written_section_paths, canonical_path, user_editable_
 sections + Handoff Bundle (section 17). Applies `session.md.section_overrides`
 on top of fragment-source content per S11 routing table.
 
-## Algorithm
-1. For each section 1..17, render via S11 source map:
-   - 1: `session.md` metadata + `stages/N1-RESTATE.md` intent
-   - 2: `session.md.locked_vocabulary`
-   - 3: `apus[type=invariant]` + Section 11.1 pre-mortem with non-empty `elevated_to_invariants`
-   - 4: `apus[type=interface]`
-   - 5: N-SPEC-CONSTRUCT `sections[5]`
-   - 6: N-SPEC-CONSTRUCT `hints`
-   - 7: N-CONSTRAINT-INVENTORY (both axes)
-   - 8: `session.md.apus`
-   - 9: `apus[type=assumption]`
-   - 10: N-FALSIFY `requirements`
-   - 11: N-ADVERSARIAL-REVIEW
-   - 12: N-INTENT-LAYER `non_goals`
-   - 13: `session.md.open_questions_queue`
-   - 14: N-PRUNE recommendation + decision_log + rejected_alternatives
-   - 15: N-DEPENDENCY-MAP
-   - 16: Provenance map (cross-ref of APU IDs <- lens/branch tags from N-AGGREGATION)
-   - 17: `session.md.handoff_bundle` (rendered as Handoff Bundle YAML block)
-2. Apply `section_overrides[<N>]` over rendered content.
-3. Write each section as `stages/spec-v<V>-section-<SS>.md` (SS = 01..17).
-4. Invoke `scripts/spec-chunk-write.sh` to concatenate.
+## Algorithm (v1.1 — schema-adaptive)
+
+1. **Read the section map** from N-SPEC-CONSTRUCT output
+   (`stages/N11-SPEC-CONSTRUCT.md` or session.md.section_map). The section map
+   declares the desired output sections as an ordered array:
+   `{section_number, section_title, content_source, is_normative}`.
+   - If no section_map exists, fall back to the canonical 17-section default
+     (preserves backward compatibility).
+   - Support arbitrary numbering: `5`, `5.5`, `6`, `A`, `B` etc.
+
+2. **Render each section** by looking up its `content_source`:
+   | source_key | GRS state lookup |
+   |------------|-------------------|
+   | `metadata` | `session.md` metadata + `stages/N1-RESTATE.md` intent |
+   | `locked_vocabulary` | `session.md.locked_vocabulary` |
+   | `invariants` | `apus[type=invariant]` + pre-mortem |
+   | `interfaces` | `apus[type=interface]` |
+   | `behavior` | N-SPEC-CONSTRUCT `sections[<N>]` |
+   | `hints` | N-SPEC-CONSTRUCT `hints` |
+   | `constraints` | N-CONSTRAINT-INVENTORY |
+   | `apu_registry` | `session.md.apus` |
+   | `assumptions` | `apus[type=assumption]` |
+   | `falsifiability` | N-FALSIFY `requirements` |
+   | `risk` | N-ADVERSARIAL-REVIEW |
+   | `non_goals` | N-INTENT-LAYER `non_goals` |
+   | `open_questions` | `session.md.open_questions_queue` |
+   | `decision_log` | N-PRUNE recommendation + decision_log |
+   | `dependency_map` | N-DEPENDENCY-MAP |
+   | `provenance` | cross-ref of APU IDs from N-AGGREGATION |
+   | `handoff_bundle` | `session.md.handoff_bundle` |
+   | `smoke_tests` | `stages/artifact-smoke-tests.md` |
+   | `mode_matrix` | `stages/artifact-mode-matrix.md` |
+   | `artifacts` | `stages/N11-ARTIFACT-GENERATOR.md` artifact list |
+   | `appendix` | dynamically named appendix from artifact generator |
+
+3. **Apply `section_overrides[<N>]`** over rendered content.
+4. **Write each section** as `stages/spec-v<V>-section-<SS>.md`
+   (SS = zero-padded section number from the section_map).
+   **Version source:** `V = session.md.current_version`. Read this AFTER the
+   orchestrator has incremented it (increment happens before N-GRS-EXPORT
+   dispatch in the approval cycle). On the initial Phase 12 run, V = 0.
+   After the first [REJECT]/[ADD]/[APPROVE WITH EDITS] cycle, V = 1, etc.
+5. **Invoke `scripts/spec-chunk-write.sh`** to concatenate in section_map order,
+   passing `--version <V>` (same V as step 4).
 
 ### Required output
 After completing the algorithm, populate these fields:

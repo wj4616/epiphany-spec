@@ -102,7 +102,7 @@ session_id: $SESSION_ID
 state: RUNNING
 scale: $MODE
 flags: "$SANITIZED_FLAGS"
-topic_slug: $TOPIC_SLUG
+topic_slug: "$TOPIC_SLUG"
 input_kind: ""
 active_branches: $ACTIVE_BRANCHES
 spawn_count: 0
@@ -130,7 +130,7 @@ section_overrides: {}
 abort_metadata: null
 created_ts: \"$TIMESTAMP\"
 pause_ts: null
-solution_dir: $SOLUTION_DIR
+solution_dir: "$SOLUTION_DIR"
 EOF
 
 # Backup discipline (§3): atomic backup at write time.
@@ -147,3 +147,6 @@ ln -s "$SOLUTION_DIR" "$SD/spec-export"
 echo "$SD"
 echo "topic_slug: $TOPIC_SLUG"
 echo "solution_dir: $SOLUTION_DIR"
+
+# Langfuse tracing — non-blocking, errors are suppressed.
+python3 "$REPO/scripts/langfuse_tracer.py" init --session-dir "$SD" 2>/dev/null || true

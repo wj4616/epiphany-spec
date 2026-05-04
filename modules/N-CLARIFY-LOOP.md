@@ -8,6 +8,12 @@ required_output_sections: [open_questions, answers_received]
 
 # N-CLARIFY-LOOP -- Phase 5 Clarify-Loop (pause-and-ask)
 
+## Auto-skip condition
+If `N-AUTO-RESOLVE.remaining_human_items` is empty **and**
+`N-AMBIGUITY-SCAN.contradictions` is empty: skip this node entirely.
+Emit `open_questions: []` and `answers_received: []` without pausing.
+The orchestrator proceeds directly to Phase 6.
+
 ## Role
 For each unresolved item from N-AMBIGUITY-SCAN, formulate ONE clarifying
 question. The orchestrator emits the questions block and pauses (state ->

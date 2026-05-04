@@ -23,3 +23,15 @@ cp "$SRC" "$TMP"
 sync "$TMP" 2>/dev/null || true
 mv "$TMP" "$DST"
 echo "wrote $DST"
+
+# Langfuse tracing — non-blocking.
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+# Find the session dir whose spec-export symlink points at this solution dir.
+SESSION_DIR=$(find ~/docs/epiphany/spec -maxdepth 1 -mindepth 1 -type d \
+  -exec sh -c '[ "$(readlink "$1/spec-export" 2>/dev/null)" = "'"$SD"'" ] && echo "$1"' _ {} \; 2>/dev/null | head -1)
+if [ -n "$SESSION_DIR" ] && [ -f "$SESSION_DIR/.langfuse_state.json" ]; then
+  python3 "$REPO/scripts/langfuse_tracer.py" finalize \
+    --session-dir "$SESSION_DIR" \
+    --spec-path "$DST" \
+    --state FINALIZED 2>/dev/null || true
+fi

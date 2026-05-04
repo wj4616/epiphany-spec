@@ -1,6 +1,6 @@
 ---
 name: epiphany-spec
-version: 1.0.0
+version: 1.1.0
 description: >
   Graph-of-Thought brainstorm-to-specification skill (Excavate -> Distill -> Crystallize).
   Takes raw or enhanced input and produces a versioned, audited spec doc with a
@@ -16,7 +16,7 @@ session_output_base: ~/docs/epiphany/spec/
 spec_output_base: ~/docs/solution/
 ---
 
-# epiphany-spec v1.0.0 -- Orchestrator
+# epiphany-spec v1.1.0 -- Orchestrator
 
 You are the **orchestrator** of `epiphany-spec`. You execute a Graph-of-Thought
 pipeline declared in `graph.json`. Some nodes run **inline** in your own
@@ -33,10 +33,13 @@ finalize on `[APPROVE]`.
 ## ARCHITECTURE
 
 - **`SKILL.md` (this file):** orchestrator. You are the main agent.
-- **`graph.json`:** static topology + inactive rewrite-rule templates. Single
-  source of truth for nodes, forward/back/dynamic edges, exec types, tiers.
-- **`hats.json`:** `{hat-name -> tier}` map. Tier resolves to model-id via
-  default-models or `--model-{large,medium,small}` flags.
+- **`graph.json`:** static topology + dynamic instantiation templates
+  (`dynamic_templates` key). Single source of truth for nodes,
+  forward/back/dynamic edges, exec types, tiers, and dynamic node templates
+  (DOMAIN-TARGETED, RANDOM-ENTRY, REFRAME).
+- **`hats.json`:** `{tiers: {tier -> [hat-names]}, default_models: {...}}` registry.
+  Lookup: `tier = hats.json.tiers.<level>.includes(N.hat) ? <level> : error`.
+  Tier resolves to model-id via `default_models` or `--model-{large,medium,small}` flags.
 - **`modules/N*.md`:** per-node protocols with YAML frontmatter
   `{node_id, phase, hat, exec_type, required_output_sections}`. Inline nodes
   read by you; spawn nodes dispatched via `Agent` tool. No-llm nodes execute
@@ -167,6 +170,7 @@ Inventory:
 | `halt-reject-resolution-fail`   | [REJECT items: <ref>] | section ref -> zero APUs |
 | `halt-section-readonly-violation` | [APPROVE WITH EDITS] | edit to read-only section/subfield |
 | `halt-hg2-violation`            | [APPROVE WITH EDITS] | edit to HG2-protected source intent |
+| `halt-intent-alignment-deadlock` | V-check post Phase 12 | intent_alignment_score < 0.9 after 2 re-routes; blocks [APPROVE]; overrideable via [APPROVE WITH EDITS] with explicit acknowledgment |
 | `halt-time-budget-hardcap`      | per-phase budget | actual > 3x rounded budget |
 | `halt-session-md-unrecoverable` | session.md corruption recovery exhausted | `.bak` also unreadable (Pass-3 F205: v1.0 has only the .bak fallback; reconstruction-from-ledger deferred to v1.1) |
 
@@ -252,7 +256,10 @@ they had completed (they were never going to fire this run).
 The orchestrator picks ready nodes in graph-declared order:
 
 1. Resolve next ready node `N`.
-2. Look up tier via `hats.json[N.hat]`.
+2. Look up tier: iterate `hats.json.tiers` (keys: `large`, `medium`, `small`,
+   `no-llm`); the first key whose array contains `N.hat` is the tier. If
+   `N.hat` is null or not found in any array: default to `medium` and emit
+   `[TIER-LOOKUP-MISS hat=<H>]` informational.
 3. Compose `{{ledger_at_dispatch}}` by invoking
    `python3 scripts/ledger_digest.py --session-dir <SD> --max-entries 8 --max-bytes 8192`
    and substituting its stdout into the prompt template (F106 — deterministic;
@@ -282,8 +289,15 @@ The orchestrator picks ready nodes in graph-declared order:
      prompt body to `Agent(subagent_type=general-purpose, ...)`. Required
      output sections must be returned as a YAML block.
 6. Write fragment to `stages/N<P>-<NodeName>[-<seq>].md` (fragment naming per GRS layout above; seq suffix only on re-fire passes).
-7. Run **N-SCORE** (mixed tier -- see modules/N-SCORE.md): LLM-judged for
-   creative-divergence nodes, deterministic for templating/transformation.
+7. Run **N-SCORE**:
+   - **Deterministic path** (all nodes except the 7 creative-divergence nodes
+     listed below): compute `score = populated_required_sections /
+     total_required_sections` inline. Do NOT invoke `ledger_digest.py`,
+     do NOT role-switch to N-SCORE. Record `trigger_mode: deterministic`.
+   - **LLM-judged path** (Phase 6 branches: LATERAL, SPREADING, SIMULATION,
+     ADVERSARIAL; plus N-AGGREGATION, REFRAME, RANDOM-ENTRY): dispatch
+     N-SCORE normally — role-switch to `scorer` hat, run `ledger_digest.py`,
+     call model-small per modules/N-SCORE.md.
 8. Append ledger entry: `python3 scripts/ledger_append.py --session-dir ... --node-id <N>
    --phase <P> --cycle <C> --fragment <path> --hat <hat> --tier <tier>
    --exec-type <type> --score <s> --signals '<json>' --provenance-tags '<list>'
@@ -492,7 +506,7 @@ item logged in session.md.open_questions_queue).
 | State | Description | Transitions to |
 |---|---|---|
 | `RUNNING` | Pipeline executing | `AWAITING_CLARIFY` (Phase 5 pause), `AWAITING_GATE` (Phase 12 pause) |
-| `AWAITING_CLARIFY` | Paused inside Phase 5 | `RUNNING` on labeled answers or `[SKIP]` |
+| `AWAITING_CLARIFY` | Paused inside Phase 5 | `RUNNING` on labeled answers or `[SKIP]`; `ABORTED` on `[ABORT]` |
 | `AWAITING_GATE` | Paused at Phase 12 gate | `RUNNING` on `[REJECT]`/`[ADD]`/`[APPROVE WITH EDITS]`; `AWAITING_REWORK_CONFIRM` on `[REWORK]`; `FINALIZED` on clean `[APPROVE]`; `ABORTED` on `[ABORT]` |
 | `AWAITING_REWORK_CONFIRM` | Awaiting `[CONFIRM-REWORK]` | `RUNNING` on `[CONFIRM-REWORK]`; `AWAITING_GATE` on any other reply |
 | `FINALIZED` | `spec-final.md` written | Terminal |
@@ -507,29 +521,16 @@ Sequential sub-steps:
    `stages/N1-RESTATE.md`).
 2b. **V4 + V5** (fragment/trace-only -- runnable before spec file exists). Run via
     `bash scripts/validate-spec-doc.sh --phase pre-grs-export --session-dir <path>`.
-3. **N-GRS-EXPORT** (no-llm; canonical first then user copy):
-    - Render Sections 1..16 from the spec section map:
-      | Sec | Content source |
-      |-----|----------------|
-      | 1   | session.md.flags.title or input first line |
-      | 2   | N-RESTATE locked vocabulary output |
-      | 3   | N-INTENT-LAYER invariants |
-      | 4   | N-DECOMPOSE-APU interface boundaries |
-      | 5   | N-SPEC-CONSTRUCT sections[5] (architectural overview) |
-      | 6   | N-INTENT-LAYER + N-CONSTRAINT-INVENTORY APUs |
-      | 7   | N-CONSTRAINT-INVENTORY + N-ADVERSARIAL constraints |
-      | 8   | session.md.apus full list |
-      | 9   | N-DEPENDENCY-MAP dependency graph |
-      | 10  | N-FALSIFY falsifiability tests |
-      | 11  | N-FORWARD-CHAIN-BATCH forward chain |
-      | 12  | N-INTENT-LAYER non-goals |
-      | 13  | Decision log (ledger-sourced) |
-      | 14  | N-PRUNE tradeoff matrix |
-      | 15  | N-AGGREGATION convergent nodes + contradictions |
-      | 16  | N-SPEC-AUDIT-MECHANICAL audit summary |
-    - Render Handoff Bundle as section 17 (7-artifact YAML).
+3. **N-GRS-EXPORT** (no-llm; schema-adaptive; canonical first then user copy):
+    - Read `section_map` from N-SPEC-CONSTRUCT output (ordered array of
+      `{section_number, section_title, content_source, is_normative}`).
+    - If no section_map exists, fall back to the canonical 17-section default.
+    - Support arbitrary numbering: `5`, `5.5`, `6`, `A`, `B` etc.
+    - Render each section by looking up its `content_source` in GRS state
+      (see N-GRS-EXPORT.md module for the source_key table).
+    - Render Handoff Bundle as the final section.
     - Apply `session.md.section_overrides` per routing.
-    - Write `stages/spec-v<V>-section-{01..17}.md`.
+    - Write `stages/spec-v<V>-section-<SS>.md` (SS from section_map).
     - Invoke `bash scripts/spec-chunk-write.sh --session-dir <path> --version <V>
       --solution-dir <solution-path>`.
 3b. **V1a, V1b, V2, V3, V6, V7a, V7b, V8** (spec-file-dependent -- must run
@@ -548,18 +549,22 @@ SPEC HUMAN REVIEW GATE -- session <id>, version v<N>
 
 Spec written to ~/docs/solution/<DD-MM-slug>/spec-v<N>.md
 Completeness score: <X>/1.0 (threshold 0.8)
+Intent alignment: <IA>/1.0 (threshold 0.9; below threshold blocks [APPROVE])
 Open questions: <K>  Conflicts: <M>  Score-stagnant items: <P>
 Decision warnings: <W>   (from N-SPEC-AUDIT-MECHANICAL.human_decision_warnings + post-signal orchestrator check)
 V-check warnings: <V>    (failed/deadlocked checks from session.md.verification_log;
                           [V5-AUDIT-FAIL] is warning only;
-                          V1a/V1b/V2/V3/V6/V7a/V7b [VERIFICATION-DEADLOCK] block [APPROVE];
-                          V8 deadlock blocks finalize)
+                          V1a/V1b/V2/V3/V6/V7a/V7b/V9/V10 [VERIFICATION-DEADLOCK] block [APPROVE];
+                          V8 deadlock blocks finalize;
+                          intent_alignment_score < 0.9 blocks [APPROVE] — re-route via
+                          N-SPEC-AUDIT-SEMANTIC.recommended_re_route_node first)
 
 To resume, reply with ONE of:
   [APPROVE]                  — finalize as spec-final.md (auto-detects file edits *)
   [APPROVE WITH EDITS]       — explicit confirmation that you edited the file
   [REJECT items: <ids>]      — APU IDs (e.g., APU-007) or section refs (e.g., 4.2);
                                routes through N-REFINE-QUERY → N-FALSIFY
+                               (exception: 14.1 routes to N-PRUNE re-execution)
   [ADD: <text>]              — new APU; runs N-FALSIFY + N-FORWARD-CHAIN-BATCH +
                                N-DEPENDENCY-MAP for that item only
   [REWORK from phase <N>]    — major rethink; re-enters at named phase 0..12
@@ -678,6 +683,10 @@ All V-checks run via `scripts/validate-spec-doc.sh` and log to
 - V7a -> Phase 11 N-SPEC-CONSTRUCT
 - V7b -> Phase 11 N-SPEC-CONSTRUCT
 - V8 -> re-run `spec-chunk-write.sh` per step 5 (own recovery path)
+- V9 -> Phase 0 N-VERBATIM-GUARD (re-extract verbatim locks) then Phase 11
+  N-SPEC-CONSTRUCT (re-render with locks enforced; BUG-13 fix)
+- V10 -> Phase 11 N-SPEC-CONSTRUCT (rebuild section_map to match input
+  structure; BUG-12 fix)
 
 ### Loop protection
 **Max 2 re-routes per check** in a single session. 3rd FAIL -> emit
@@ -690,6 +699,13 @@ All V-checks run via `scripts/validate-spec-doc.sh` and log to
 - Per-thought advance < 0.6 -> does NOT advance (M3 zero-fatigue).
 - Sign-off completeness >= 0.8 (`min(coverage_apus, coverage_falsifiability,
   coverage_dependency_map, coverage_conflict_resolution)`).
+- Intent alignment >= 0.9 (v1.1; BUG-9 fix). If `intent_alignment_score < 0.9`:
+  1. Targeted re-route per N-SPEC-AUDIT-SEMANTIC's `recommended_re_route_node`.
+  2. Re-check after re-route (max 2 re-routes per check, same as standard loop).
+  3. If still < 0.9 after 2 re-routes: emit `[INTENT-ALIGNMENT-DEADLOCK
+     score=<X>]`, surface in gate block V-check warnings, **block [APPROVE]**
+     until human explicitly overrides via `[APPROVE WITH EDITS]` after
+     acknowledging the alignment warning in their message.
 
 ### V-check failure after [APPROVE]
 - V8: re-run from last completed section in `write_progress`. If V8 passes on
@@ -720,3 +736,50 @@ Suppressed when `--quiet` is also present.
 **Other flags do not modify the announce string.** `--xml`, `--deep`,
 `--minimal`, `--improve` (reserved), `--resume`, and all numeric/model
 overrides produce no additional announce text beyond the mode line above.
+
+## LANGFUSE TRACING (OPTIONAL)
+
+Traces epiphany-spec runs to Langfuse. Enabled when
+`~/.claude/skills/epiphany-spec/langfuse.env` contains non-empty credentials.
+**Tracing failures are non-fatal** — catch stderr output and continue.
+
+### Call sites (all via Bash whitelist)
+
+**1. After SESSION INIT** (after `session-init.sh` returns and PRC1 passes):
+```
+python3 ~/.claude/skills/epiphany-spec/scripts/langfuse_tracer.py init \
+  --session-dir <SD>
+```
+On success prints `[langfuse_tracer] trace created: <url>` — emit this URL to
+the user as an informational note only if `--verbose` is set.
+
+**2. After every `ledger_append.py` call** (step 8 of the ready-set loop):
+```
+python3 ~/.claude/skills/epiphany-spec/scripts/langfuse_tracer.py node-span \
+  --session-dir <SD> \
+  --node-id <N.node_id> \
+  --phase <P> \
+  --cycle <C> \
+  --hat <hat> \
+  --tier <tier> \
+  --exec-type <exec_type> \
+  --score <score> \
+  --signals '<signals_json>' \
+  --headline '<headline>'
+```
+Pass the same args used for `ledger_append.py`. Quote `--signals` and
+`--headline` carefully (same quoting rules as the ledger script).
+
+**3. On finalization** (after `finalize-spec.sh` succeeds in Phase 12) or
+on `[ABORT]` signal:
+```
+python3 ~/.claude/skills/epiphany-spec/scripts/langfuse_tracer.py finalize \
+  --session-dir <SD> \
+  --spec-path <path/to/spec-final.md>   \
+  --state FINALIZED
+```
+For `[ABORT]`: omit `--spec-path`, set `--state ABORTED`.
+
+### State file
+The tracer writes `<SD>/.langfuse_state.json` (trace_id, node_count, URL).
+This file is internal to the tracer; do NOT read or mutate it directly.
